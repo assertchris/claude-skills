@@ -78,14 +78,14 @@ if [ -f "$CACHE_FILE" ]; then
         week_display=$(echo "$week_pct" | awk '{printf "%d", $1 + 0.5}')
 
         # Color based on percentage
-        if [ "$session_display" -ge 80 ] 2>/dev/null; then
+        if [ "$session_display" -ge 90 ] 2>/dev/null; then
             sc="$RED"
         elif [ "$session_display" -ge 50 ] 2>/dev/null; then
             sc="$YELLOW"
         else
             sc="$GREEN"
         fi
-        if [ "$week_display" -ge 80 ] 2>/dev/null; then
+        if [ "$week_display" -ge 90 ] 2>/dev/null; then
             wc="$RED"
         elif [ "$week_display" -ge 50 ] 2>/dev/null; then
             wc="$YELLOW"
@@ -108,7 +108,7 @@ if [ -n "$used" ]; then
         pct=$(( (i + 1) * 5 ))
         if [ "$pct" -le 40 ]; then
             bar="${bar}${GREEN}█"
-        elif [ "$pct" -le 80 ]; then
+        elif [ "$pct" -le 75 ]; then
             bar="${bar}${YELLOW}█"
         else
             bar="${bar}${RED}█"
