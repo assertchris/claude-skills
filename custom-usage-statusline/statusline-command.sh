@@ -93,7 +93,16 @@ if [ -f "$CACHE_FILE" ]; then
             wc="$GREEN"
         fi
 
-        usage_text="  |  session ${sc}${session_display}%${RESET} / week ${wc}${week_display}%${RESET}"
+        session_resets=$(jq -r '.five_hour.resets_at // empty' "$CACHE_FILE" 2>/dev/null)
+        reset_display=""
+        if [ -n "$session_resets" ]; then
+            reset_epoch=$(date -d "$session_resets" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$(echo "$session_resets" | sed 's/\.[0-9]*[+-].*$//')" +%s 2>/dev/null)
+            if [ -n "$reset_epoch" ]; then
+                reset_display=" ($(date -d "@$reset_epoch" +%H:%M 2>/dev/null || date -j -f %s "$reset_epoch" +%H:%M 2>/dev/null))"
+            fi
+        fi
+
+        usage_text="  |  session ${sc}${session_display}%${RESET}${reset_display} / week ${wc}${week_display}%${RESET}"
     fi
 fi
 
