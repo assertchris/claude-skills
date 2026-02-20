@@ -121,7 +121,7 @@ if [ -n "$used" ]; then
         i=$((i + 1))
     done
     bar="${bar}${RESET}"
-    printf "\n%s  |  context [%s] %d%%%s\n\xe2\x80\x8b\n" "$model" "$bar" "$used" "$usage_text"
+    printf "\n%s  |  context [%s] %d%%%s\n​\n" "$model" "$bar" "$used" "$usage_text"
 else
-    printf "\n%s  |  context [--]%s\n\xe2\x80\x8b\n" "$model" "$usage_text"
+    printf "\n%s  |  context [--]%s\n​\n" "$model" "$usage_text"
 fi
