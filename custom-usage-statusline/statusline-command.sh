@@ -102,35 +102,20 @@ if [ -f "$CACHE_FILE" ]; then
             fi
         fi
 
-        usage_text="  |  session ${sc}${session_display}%${RESET}${reset_display} / week ${wc}${week_display}%${RESET}"
+        usage_text=" / session ${sc}${session_display}%${RESET}${reset_display} / week ${wc}${week_display}%${RESET}"
     fi
 fi
 
-# --- Context bar ---
+# --- Context percentage ---
 if [ -n "$used" ]; then
-    bar_width=20
-    filled=$(echo "$used $bar_width" | awk '{printf "%d", ($1 / 100) * $2 + 0.5}')
-    empty=$((bar_width - filled))
-    bar=""
-    i=0
-    while [ "$i" -lt "$filled" ]; do
-        pct=$(( (i + 1) * 5 ))
-        if [ "$pct" -le 40 ]; then
-            bar="${bar}${GREEN}█"
-        elif [ "$pct" -le 75 ]; then
-            bar="${bar}${YELLOW}█"
-        else
-            bar="${bar}${RED}█"
-        fi
-        i=$((i + 1))
-    done
-    i=0
-    while [ "$i" -lt "$empty" ]; do
-        bar="${bar}${RESET}░"
-        i=$((i + 1))
-    done
-    bar="${bar}${RESET}"
-    printf "\n%s  |  context [%s] %d%%%s\n​\n" "$model" "$bar" "$used" "$usage_text"
+    if [ "$used" -ge 80 ] 2>/dev/null; then
+        cc="$RED"
+    elif [ "$used" -ge 50 ] 2>/dev/null; then
+        cc="$YELLOW"
+    else
+        cc="$GREEN"
+    fi
+    printf "\n%s / context ${cc}%d%%${RESET}%s\n​\n" "$model" "$used" "$usage_text"
 else
-    printf "\n%s  |  context [--]%s\n​\n" "$model" "$usage_text"
+    printf "\n%s / context --%%%s\n​\n" "$model" "$usage_text"
 fi

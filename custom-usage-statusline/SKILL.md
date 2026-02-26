@@ -15,7 +15,7 @@ This skill configures Claude Code's statusline to display your usage limits (ses
    - **Linux**: Reads from GNOME Keyring via `secret-tool`, with fallback to `~/.claude/.credentials.json`
 2. **Calls the usage API** (`GET https://api.anthropic.com/api/oauth/usage`) with a 3-second timeout
 3. **Caches the response** at `/tmp/claude-statusline-usage.json` for 60 seconds to avoid hammering the API
-4. **Displays** `session X% / week Y%` in the statusline, color-coded green/yellow/red
+4. **Displays** context, session, and week percentages in the statusline, each color-coded green/yellow/red based on usage level
 5. **Fails gracefully** — if the token is missing, the API is unreachable, or anything errors, the usage section is simply omitted
 
 ## Requirements
