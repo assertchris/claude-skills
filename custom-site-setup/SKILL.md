@@ -82,7 +82,7 @@ server {
     error_page 404 /index.php;
 
     location ~ \.php$ {
-        fastcgi_pass <PHP_FPM_ADDRESS>;
+        fastcgi_pass unix:/run/php/php-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
@@ -99,7 +99,7 @@ Replace placeholders:
 - `<PROJECT_PATH>` - absolute path to project (from pwd)
 - `<PUBLIC_DIR>` - the public directory (e.g., `public`)
 - `<HOME>` - user's home directory
-- `<PHP_FPM_ADDRESS>` - Always use `127.0.0.1:9000`
+- `<PHP_FPM_ADDRESS>` - Always use `unix:/run/php/php-fpm.sock`
 
 ### Step 5: Provide Commands
 
@@ -137,7 +137,7 @@ For static sites, provide an alternative config without the PHP location block. 
 
 1. **DON'T** attempt to run sudo commands directly - always provide them for the user to run
 2. **DON'T** modify /etc/hosts or nginx configs without user explicitly running the commands
-3. **DON'T** ask about PHP-FPM address - always use `127.0.0.1:9000`
+3. **DON'T** ask about PHP-FPM address - always use `unix:/run/php/php-fpm.sock`
 4. **DON'T** create the config in /etc/nginx directly - always create in project directory first
 
 ## Success Criteria
