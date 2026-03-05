@@ -1,5 +1,5 @@
 ---
-name: usage-statusline
+name: custom-usage-statusline
 description: Set up a Claude Code statusline that shows session (5h) and weekly (7d) usage limit percentages. Use when user asks to set up usage statusline, show usage limits, or configure usage display.
 user_invocable: true
 ---
