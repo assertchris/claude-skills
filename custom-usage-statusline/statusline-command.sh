@@ -12,7 +12,7 @@ RESET=$(printf '\033[0m')
 # --- Usage limits (session 5h / weekly 7d) ---
 usage_text=""
 CACHE_FILE="/tmp/claude-statusline-usage.json"
-CACHE_MAX_AGE=60
+CACHE_MAX_AGE=300
 
 fetch_usage() {
     # Platform-aware token reading
