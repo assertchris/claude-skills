@@ -1,7 +1,7 @@
 ---
 name: custom-submit-pr
 user-invocable: true
-description: Creates a GitHub pull request using gh CLI, with a description generated from the PR summary skill, assigned to assertchris. Use when user asks to make a PR, create a PR, submit a PR, or open a pull request.
+description: Creates a GitHub pull request using gh CLI, with a description generated from the PR summary skill, assigned to and reviewed by assertchris. Use when user asks to make a PR, create a PR, submit a PR, or open a pull request.
 allowed-tools: Bash(git *, gh *), Read, Glob, Skill
 ---
 
@@ -54,7 +54,7 @@ Derive a short PR title (under 70 characters) from the feature doc heading or th
 ### Step 6: Create Pull Request
 
 ```bash
-gh pr create --assignee assertchris --title "<title>" --body "$(cat <<'EOF'
+gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
 ## Summary
 <summary bullets from pr-summary skill>
 
@@ -72,7 +72,7 @@ Output the PR URL so Chris can see it.
 1. **DON'T** include checkboxes, test plans, or checklists in the PR body
 2. **DON'T** include "Files Changed" or "Key Review Areas" sections
 3. **DON'T** commit uncommitted changes — only push and create the PR
-4. **DON'T** assign to anyone other than `assertchris`
+4. **DON'T** assign or add as reviewer anyone other than `assertchris`
 5. **DON'T** create draft PRs unless Chris asks for one
 6. **DON'T** force push
 
@@ -81,4 +81,5 @@ Output the PR URL so Chris can see it.
 - Branch is pushed to remote
 - PR is created via `gh` with a concise summary
 - PR is assigned to `assertchris`
+- PR has `assertchris` as a reviewer
 - PR URL is displayed
