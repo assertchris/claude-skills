@@ -16,9 +16,22 @@ Feature docs are comprehensive and perfect for resuming work across sessions, bu
 2. Files changed, grouped by type of change
 3. Specific files reviewers should focus on
 
+## Parameters (from ARGUMENTS)
+
+| Key | Purpose | Default |
+|---|---|---|
+| `doc-path:` | Explicit path to the plan/feature doc (skips discovery) | — |
+
 ## Process
 
-### Step 1: Detect Current Branch
+### Step 1: Resolve Doc Path
+
+Check `$ARGUMENTS` for a `doc-path:` key.
+
+- If `doc-path:` is present: use it directly. **Skip Steps 2–3 entirely.**
+- If `doc-path:` is absent: continue to Steps 2–3.
+
+### Step 2: Detect Current Branch
 
 ```bash
 git branch --show-current
@@ -29,7 +42,7 @@ Extract the branch name and handle common patterns:
 - `sports-2345-add-something` → `sports-2345-add-something`
 - `bugfix/fix-thing` → `fix-thing`
 
-### Step 2: Find Feature Doc
+### Step 3: Find Feature Doc
 
 ```bash
 ls features/ | grep "<branch-name-without-prefix>"
@@ -40,11 +53,16 @@ If no feature doc exists:
 - Suggest they create one with `/feature-doc` or provide a different branch/file name
 - Ask if they want to specify a feature doc path manually
 
-### Step 3: Read Feature Doc
+### Step 4: Read Doc
 
-Read the feature doc at `features/<branch-name-without-prefix>.md`.
+Read the doc at the resolved path.
 
-### Step 4: Extract Key Information
+**Detecting doc format** — inspect the file to determine which format it uses:
+
+- **Feature doc format**: has sections like `## Overview`, `## Requirements`, `## Files Modified/Created`, `## Progress`. Extract as described below.
+- **Plan doc format** (Edgar): has YAML frontmatter (`---` … `---`), an `## Overview` section, and phases as `### Phase N: Title` headings each with `**Files:**` and `**Tests:**` lines. Extract differently — see Step 5b.
+
+### Step 5a: Extract Key Information (feature doc format)
 
 Parse the feature doc and extract:
 
@@ -74,7 +92,24 @@ Typically prioritize in this order:
 3. API endpoints/controllers (contract changes)
 4. Models (data structure changes)
 
-### Step 5: Generate PR Summary
+### Step 5b: Extract Key Information (plan doc format)
+
+Parse the plan doc and extract:
+
+**For Summary Section:**
+- `topic:` from frontmatter — the one-line feature description
+- `## Overview` section content (may be brief or TODO — use git log to supplement if sparse: `git log --oneline main...HEAD`)
+- Phase titles — listed as a high-level "what was built" summary
+
+**For Files Changed:**
+- Collect all `**Files:**` lines across all phases
+- Group by package/directory (e.g. `packages/api`, `packages/admin`, `packages/shared`)
+
+**For Key Review Areas:**
+- Identify phases with the most files or most complex scope
+- Prioritise migration files, service layer, and route/controller changes
+
+### Step 6: Generate PR Summary
 
 Create a concise summary with this structure:
 
@@ -104,7 +139,7 @@ Focus your review on:
 - **`path/to/migration.php`** — [why this is important to review]
 ```
 
-### Step 6: Format and Present
+### Step 7: Format and Present
 
 - **CRITICAL: Display raw markdown with all formatting characters visible** — The user needs to copy/paste the summary WITH markdown syntax (##, -, **, `, etc.) directly into GitHub. DO NOT just render the markdown visually - show the actual markdown characters so they can be copied.
 - **Output in markdown format** — The entire PR summary should be formatted as markdown
