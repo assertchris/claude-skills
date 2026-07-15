@@ -28,53 +28,45 @@ Confirm the PR is open (not merged, not draft, not closed). If not open, stop an
 
 ## Step 2: Phase 1 — Code Review Loop
 
-Run the following loop up to **5 times**. Stop early if the reviewer returns clean.
+Run the following loop up to **5 times**. Stop early if the review comes back clean.
 
 ### Each iteration
 
-**Sub-agent A — Code Reviewer**
+**Review (main agent)**
 
-Spawn a sub-agent. Give it the PR number and this instruction:
+Invoke the `/code-review` skill directly on PR #N. Do not spawn a sub-agent for this — run it inline. Collect every issue it surfaces with confidence ≥ 80.
 
-> Run the full `/code-review` skill on PR #N. Return every issue it surfaces with confidence ≥ 80, including file path, line number, description, and confidence score. If it finds nothing significant, return `CLEAN`.
+- If no significant issues: Phase 1 is done. Move to Phase 2.
+- If issues found: spawn the repairer.
 
-Wait for Sub-agent A to complete.
+**Sub-agent — Code Repairer**
 
-- If it returns `CLEAN`: Phase 1 is done. Move to Phase 2.
-- If it returns issues: spawn Sub-agent B.
+Spawn a sub-agent. Give it the full issue list and this instruction:
 
-**Sub-agent B — Code Repairer**
+> Fix every issue in the list. Apply the minimal correct change for each one. Do not touch anything unrelated. Stage the changed files, commit with message `fix(review): [brief description] (code-review round N)`, and push.
 
-Spawn a sub-agent. Give it the full list of issues from Sub-agent A and this instruction:
+Wait for the repairer to complete. Then start the next iteration.
 
-> Fix every issue in the list. Apply the minimal correct change for each one. Do not touch anything unrelated. Once all fixes are applied, stage the changed files, commit with message `fix(review): [brief description] (code-review round N)`, and push.
-
-Wait for Sub-agent B to complete. Then start the next iteration.
-
-If 5 rounds complete without `CLEAN`, stop and report the outstanding issues to the user.
+If 5 rounds complete without a clean pass, stop and report the outstanding issues to the user.
 
 ---
 
 ## Step 3: Phase 2 — Blast Radius Loop
 
-Run the following loop up to **5 times**. Stop early if the analyzer returns clean.
+Run the following loop up to **5 times**. Stop early if the analysis comes back clean.
 
 ### Each iteration
 
-**Sub-agent A — Blast Radius Analyzer**
+**Analysis (main agent)**
 
-Spawn a sub-agent. Give it the PR number and this instruction:
+Invoke the `change-blast-radius` skill directly on PR #N. Do not spawn a sub-agent for this — run it inline. Collect every RED or AMBER finding, every CRITICAL or HIGH security issue, and every Low or Medium effort test gap.
 
-> Run the full `change-blast-radius` skill on PR #N. Return every RED or AMBER finding, every CRITICAL or HIGH security issue, and every Low or Medium effort test gap it surfaces. If there is nothing significant, return `CLEAN`.
+- If nothing significant: Phase 2 is done. Move to Step 4.
+- If findings: spawn the repairer.
 
-Wait for Sub-agent A to complete.
+**Sub-agent — Blast Radius Repairer**
 
-- If it returns `CLEAN`: Phase 2 is done. Move to Step 4.
-- If it returns findings: spawn Sub-agent B.
-
-**Sub-agent B — Blast Radius Repairer**
-
-Spawn a sub-agent. Give it the full findings from Sub-agent A and this instruction:
+Spawn a sub-agent. Give it the full findings list and this instruction:
 
 > Fix every actionable finding in the list:
 > - CRITICAL/HIGH security findings: apply the minimal code fix.
@@ -82,11 +74,11 @@ Spawn a sub-agent. Give it the full findings from Sub-agent A and this instructi
 > - RED/AMBER deployment risks that can be addressed in code: apply the fix.
 > - Tenant divergences and High-effort test gaps: do NOT fix — note them for the final report instead.
 >
-> Once all fixes are applied, stage the changed files, commit with message `fix(review): [brief description] (blast-radius round N)`, and push.
+> Stage the changed files, commit with message `fix(review): [brief description] (blast-radius round N)`, and push.
 
-Wait for Sub-agent B to complete. Then start the next iteration.
+Wait for the repairer to complete. Then start the next iteration.
 
-If 5 rounds complete without `CLEAN`, stop and report the outstanding findings to the user.
+If 5 rounds complete without a clean pass, stop and report the outstanding findings to the user.
 
 ---
 
