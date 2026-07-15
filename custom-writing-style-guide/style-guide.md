@@ -178,6 +178,7 @@ These constructions sound generic/AI/corporate and must be actively avoided:
 10. **Exclamation mark overuse** -- more than one per section reads as fake enthusiasm
 11. **Explaining what the reader already knows** -- "As you may already know, JavaScript is a programming language..."
 12. **Burying the point** -- starting with a long preamble before getting to what matters
+13. **"The [noun] that..." paragraph openers** -- "The mechanical detail that makes this work:", "The interesting thing about this feature is...", "The distinction matters because..." These read like the reader walked in mid-conversation. They're jarring and mechanical. Instead, lead the reader in: "You may be wondering...", "Notice the ordering.", "Why does this matter?", "Take `custom-merge`..." Give the reader a reason to care before dropping the noun phrase on them.
 
 ## Calibration Examples
 
