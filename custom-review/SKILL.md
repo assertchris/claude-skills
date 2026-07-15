@@ -2,7 +2,7 @@
 name: custom-review
 description: Comprehensive PR review that loops code review and blast radius analysis, repairing issues between each pass until both phases come back clean.
 user-invocable: true
-allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(git *)
+allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(git *), Read, Edit, Write, Glob
 ---
 
 # Custom Review
@@ -41,9 +41,23 @@ Invoke the `/code-review` skill directly on PR #N. Do not spawn a sub-agent for 
 
 **Sub-agent — Code Repairer**
 
-Spawn a sub-agent. Give it the full issue list and this instruction:
+Spawn a sub-agent. Give it the full issue list, the absolute path to the project root, and this instruction:
 
-> Fix every issue in the list. Apply the minimal correct change for each one. Do not touch anything unrelated. Stage the changed files, commit with message `fix(review): [brief description] (code-review round N)`, and push.
+> You are a code repairer. Your job is to fix code issues and commit the result. You MUST commit and push before returning — do not summarise, do not report, do not stop at "here's what I'd change." Actually change the files, then commit and push.
+>
+> Working directory: [absolute path to project root]
+>
+> For each issue in the list:
+> 1. Read the file at the given path.
+> 2. Apply the minimal correct fix. Do not touch anything unrelated.
+> 3. Write the fix back.
+>
+> Once all files are fixed:
+> 4. `git add` each changed file by name (do NOT use `git add .`).
+> 5. `git commit -m "fix(review): [brief description] (code-review round N)"`
+> 6. `git push`
+>
+> Return the commit SHA and a one-line summary of what was fixed. If you cannot fix an issue, say why — but still commit and push everything else.
 
 Wait for the repairer to complete. Then start the next iteration.
 
@@ -68,13 +82,18 @@ Invoke the `change-blast-radius` skill directly on PR #N. Do not spawn a sub-age
 
 Spawn a sub-agent. Give it the full findings list and this instruction:
 
+> You are a code repairer. Your job is to fix code issues and push the result. You MUST push before returning.
+>
 > Fix every actionable finding in the list:
 > - CRITICAL/HIGH security findings: apply the minimal code fix.
 > - Low/Medium effort test gaps: write the missing test.
 > - RED/AMBER deployment risks that can be addressed in code: apply the fix.
 > - Tenant divergences and High-effort test gaps: do NOT fix — note them for the final report instead.
 >
-> Stage the changed files, commit with message `fix(review): [brief description] (blast-radius round N)`, and push.
+> Once all files are fixed:
+> 1. `git add` each changed file by name (do NOT use `git add .`).
+> 2. `git commit -m "fix(review): [brief description] (blast-radius round N)"`
+> 3. `git push` — this is MANDATORY. Do not return without running this command and confirming it succeeded.
 
 Wait for the repairer to complete. Then start the next iteration.
 
@@ -121,5 +140,6 @@ Present the report to the user and call out anything still requiring human atten
 
 - Phases run sequentially. Complete Phase 1 before starting Phase 2.
 - Sub-agents run the skills whole — do not break the skills into micro-tasks.
-- If a fix is ambiguous or risky, the repairer sub-agent must stop and surface it to the user before committing.
+- **Repairer sub-agents MUST run `git push` as their final act.** A repair that is not pushed never happened. Do not return from a repairer sub-agent without confirming `git push` exited 0.
+- If a fix is ambiguous or risky, the repairer sub-agent must surface it to the user — but still commit and push everything else first.
 - Max 5 rounds per phase. If not clean by round 5, report and wait for instruction.
