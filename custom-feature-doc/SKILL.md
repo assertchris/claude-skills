@@ -27,9 +27,9 @@ git branch --show-current
 ```
 
 Extract the branch name and handle common patterns:
-- `feature/sports-2345-add-something` → `sports-2345-add-something`
-- `sports-2345-add-something` → `sports-2345-add-something`
-- `bugfix/fix-thing` → `fix-thing`
+- `feature/2026-07-20-add-something` → `2026-07-20-add-something`
+- `2026-07-20-add-something` → `2026-07-20-add-something`
+- `fix/2026-07-20-fix-thing` → `2026-07-20-fix-thing`
 
 ### Step 2: Check if Feature Doc Already Exists
 
@@ -71,12 +71,12 @@ Tell the user:
 **User**: "Create a feature doc for this branch"
 
 **Process**:
-1. Run `git branch --show-current` → `feature/sports-2456-improve-caching`
-2. Extract branch name → `sports-2456-improve-caching`
-3. Check if `features/sports-2456-improve-caching.md` exists → No
+1. Run `git branch --show-current` → `feature/2026-07-20-improve-caching`
+2. Extract branch name → `2026-07-20-improve-caching`
+3. Check if `features/2026-07-20-improve-caching.md` exists → No
 4. Read `features/template.md`
-5. Create `features/sports-2456-improve-caching.md` with:
-   - `{{BRANCH_NAME}}` replaced with `feature/sports-2456-improve-caching`
+5. Create `features/2026-07-20-improve-caching.md` with:
+   - `{{BRANCH_NAME}}` replaced with `feature/2026-07-20-improve-caching`
    - `{{STATUS_ICON}}` replaced with `🟡`
    - `{{STATUS_TEXT}}` replaced with `In Progress`
 6. Inform user the document is ready
