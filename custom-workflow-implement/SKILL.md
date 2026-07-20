@@ -23,7 +23,7 @@ Check `$ARGUMENTS` for a `doc-path:` key.
 - If `doc-path:` is present: use it directly. Skip feature doc discovery.
 - If `doc-path:` is absent:
   1. Run `git branch --show-current` to get the branch name.
-  2. Find the feature doc in `features/` whose filename starts with the branch number.
+  2. Strip the type prefix (everything up to and including the first `/`) to get the stem (e.g. `feature/2026-07-20-add-auth` → `2026-07-20-add-auth`). The feature doc is `features/<stem>.md`.
 
 If on `main` and no `doc-path:` was given, warn the user and stop — implementation should run on a feature branch.
 
