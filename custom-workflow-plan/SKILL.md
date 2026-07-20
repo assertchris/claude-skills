@@ -41,7 +41,7 @@ Check `$ARGUMENTS` for a `doc-path:` key.
 - If `doc-path:` is present: use it directly as the plan doc path. Skip feature doc discovery entirely.
 - If `doc-path:` is absent:
   1. Run `git branch --show-current` to get the current branch name.
-  2. Find the feature doc in `features/` whose filename starts with the branch number (e.g. `features/019-some-slug.md`).
+  2. Strip the type prefix (everything up to and including the first `/`) to get the stem (e.g. `feature/2026-07-20-add-auth` → `2026-07-20-add-auth`). The feature doc is `features/<stem>.md`.
 
 If on `main` and no `doc-path:` was given, warn the user — plan docs should be written on a feature branch. Stop.
 
