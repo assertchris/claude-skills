@@ -38,26 +38,16 @@ Transform the raw purpose into a slug:
 5. Trim leading and trailing hyphens
 6. **Truncate to 40 characters max**, cutting at the last `-` boundary (do not cut mid-word)
 
-## Step 3: Determine next branch number
+## Step 3: Determine branch name
 
-Resolve the project directory for the feature count:
-
-1. If the project hint is non-empty and `<project-hint>/features/` exists: use that as the feature directory.
-2. If the project hint is non-empty but that path doesn't exist: derive the basename and search the projects root:
-   ```bash
-   PROJECTS_DIR=$(dirname $(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD"))
-   find "$PROJECTS_DIR" -maxdepth 1 -type d -name "<basename>" 2>/dev/null | head -1
-   ```
-3. If the project hint is empty: use the current directory.
-
-Then run:
+Run:
 ```bash
-ls <feature-dir>/features/ | grep -oE '^[0-9]+' | sort -n | tail -1
+date +%Y-%m-%d
 ```
 
-Increment by 1 and zero-pad to 3 digits (e.g. `77` → `078`). If no output, use `001`.
+The branch name is `feature/<today>-<slug>` (e.g. `feature/2026-07-20-add-auth`).
 
-The branch name is `feature/<NNN>-<slug>`.
+The feature doc filename is `<today>-<slug>.md`.
 
 ## Step 4: Check for feature doc template
 
