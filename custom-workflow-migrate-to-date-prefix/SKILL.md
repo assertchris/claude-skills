@@ -120,6 +120,12 @@ git -C <project>/.worktrees/feature/NNN-slug status --porcelain 2>/dev/null
 
 **d. Update any README or index file** in `features/` that contains the old filename as a literal string. Use `sed -i` to replace `NNN-slug.md` with `YYYY-MM-DD-slug.md` in that file.
 
+**e. Remove `features/template.md`** if it exists in the project (once, after all renames are done):
+```bash
+git -C <project> rm features/template.md 2>/dev/null || rm -f <project>/features/template.md
+```
+Print: `Removed features/template.md (template now lives alongside the skill)`
+
 ## Step 8: Summary
 
 After applying all changes, print:
