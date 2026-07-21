@@ -49,25 +49,16 @@ The branch name is `feature/<today>-<slug>` (e.g. `feature/2026-07-20-add-auth`)
 
 The feature doc filename is `<today>-<slug>.md`.
 
-## Step 4: Check for feature doc template
+## Step 4: Resolve feature doc template
 
-Run:
-```bash
-git -C <feature-dir> show HEAD:features/template.md > /dev/null 2>&1
-```
+Use this priority order to find the template source:
 
-- If it **succeeds**: the template is committed to the repo. No extra copy needed.
-- If it **fails**: no committed template exists. Call `AskUserQuestion` **directly and immediately** — do NOT write the question as text first. Ask:
+1. **Project override**: check if `<feature-dir>/.claude/feature-doc-template.md` exists. If so, use it.
+2. **Skill default**: use `~/.claude/skills/custom-workflow-new-feature/template.md`.
 
-  > "No `features/template.md` found in this project. Which template should I copy into the worktree?"
+Never ask the user. Never look for `features/template.md` in the repo.
 
-  Offer these options:
-  - `friday.assertchris.dev` — `/home/friday/Code/friday.assertchris.dev/features/template.md`
-  - `floaty.dev` — `/home/friday/Code/floaty.dev/features/template.md`
-  - `gepetto.assertchris.dev` — `/home/friday/Code/gepetto.assertchris.dev/features/template.md`
-  - `shell.assertchris.dev` — `/home/friday/Code/shell.assertchris.dev/features/template.md`
-
-  The user may also type a custom path via **Other**. Remember this path — before creating the feature doc, copy the template file to `{worktree}/features/template.md` (create the features/ directory if needed).
+Remember the resolved template path — it will be copied into the worktree in step 6.
 
 ## Step 5: Pull main before creating the worktree
 
@@ -87,7 +78,7 @@ The worktree will be placed at `<feature-dir>/.worktrees/<branch>`.
 
 Once the worktree exists, copy dependency directories from the main project into the worktree so tools like prettier, tsc, etc. are immediately available without a fresh install. Use `cp -r` (not symlinks) so changes inside the worktree never bleed back. For each of the following directories, if it exists in the main project, copy it into the worktree: `node_modules`, `vendor`.
 
-If a template needed to be copied from another project (step 4), do that now.
+Copy the resolved template (step 4) to `<feature-dir>/.worktrees/<branch>/features/template.md`, creating the `features/` directory if needed.
 
 Using the worktree's absolute path, create the feature doc file inside the worktree (do not commit it).
 
