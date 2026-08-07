@@ -62,13 +62,15 @@ Remember the resolved template path — it will be copied into the worktree in s
 
 ## Step 5: Pull main before creating the worktree
 
-Before creating the worktree, ensure the project's main branch is up to date. Run in the resolved project directory:
+Before creating the worktree, ensure the project's main branch is up to date. If there are unstaged changes, stash them first, pull, then pop the stash. Run:
 
 ```bash
+git -C <feature-dir> stash
 git -C <feature-dir> pull origin $(git -C <feature-dir> rev-parse --abbrev-ref HEAD)
+git -C <feature-dir> stash pop
 ```
 
-If the pull fails (e.g. no remote, offline), warn Chris but continue — do not abort.
+If `git stash` reports "No local changes to save", skip the stash/pop and just pull. If the pull fails (e.g. no remote, offline), warn Chris but continue — do not abort.
 
 ## Step 6: Create worktree and feature doc
 
@@ -78,9 +80,7 @@ The worktree will be placed at `<feature-dir>/.worktrees/<branch>`.
 
 Once the worktree exists, copy dependency directories from the main project into the worktree so tools like prettier, tsc, etc. are immediately available without a fresh install. Use `cp -r` (not symlinks) so changes inside the worktree never bleed back. For each of the following directories, if it exists in the main project, copy it into the worktree: `node_modules`, `vendor`.
 
-Copy the resolved template (step 4) to `<feature-dir>/.worktrees/<branch>/features/template.md`, creating the `features/` directory if needed.
-
-Using the worktree's absolute path, create the feature doc file inside the worktree (do not commit it).
+Read the contents of the resolved template (step 4). Using the worktree's absolute path, create the feature doc at `<feature-dir>/.worktrees/<branch>/features/<feature-doc-filename>` with the template contents as the initial body (do not commit it). Do NOT copy the template file itself into the project — only use its contents.
 
 ## Step 7: Done
 
