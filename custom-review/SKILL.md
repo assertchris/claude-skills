@@ -103,7 +103,7 @@ If 5 rounds complete without a clean pass, stop and report the outstanding findi
 
 ## Step 4: Final Report
 
-Post a comment on the PR:
+Post a comment on the review PR (child PR if one was created, otherwise the original PR):
 
 ```bash
 gh pr comment <number> --body "<report>"
@@ -133,6 +133,50 @@ Report format:
 ```
 
 Present the report to the user and call out anything still requiring human attention.
+
+---
+
+## Step 5: Notify Original PR (child PR only)
+
+This step only applies when the review was of **someone else's PR** and a child review PR was opened (per the review workflow in preference 28: branch like `review/...` targeting the original PR's branch, not `main`).
+
+### Detect whether a child PR exists
+
+Check the current review PR's base branch:
+
+```bash
+gh pr view <child-pr-number> --json baseRefName --jq '.baseRefName'
+```
+
+- If the base branch is `main`, `master`, or `develop` → this is not a child PR. Skip Step 5.
+- Otherwise → the base branch is the original PR's branch. Continue.
+
+### Find the original PR
+
+```bash
+gh pr list --head <base-branch-name> --json number,title,url --jq '.[0]'
+```
+
+If no PR is found for the base branch, skip Step 5 (nothing to notify).
+
+### Post a comment on the original PR
+
+```bash
+gh pr comment <original-pr-number> --body "<notification>"
+```
+
+Notification format:
+
+```markdown
+## Review fixes available — PR #[child-pr-number]
+
+A review of this PR surfaced issues that have been fixed in a separate branch. PR #[child-pr-number] ([child PR title]) targets this branch and should be merged here before this PR lands.
+
+**What it fixes:**
+[Bullet list of the fixes made, pulled from the Step 4 "What was fixed" section. Keep it concise — one line per fix.]
+
+**To merge:** `gh pr merge [child-pr-number] --squash` (or review and merge via GitHub).
+```
 
 ---
 
