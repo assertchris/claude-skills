@@ -48,7 +48,7 @@ This feature will {{WHAT_YOU_ARE_BUILDING}} so that {{USERS / ADMINS / SYSTEM}} 
 > Break into ordered steps. Each step should be independently reviewable.
 > **Code style**: No useless comments. Only add comments that explain tricky/non-obvious code.
 > **Before committing**: Run `npm run format` and `npm test` before every commit.
-> **No auto-committing**: Only commit when explicitly asked. `git status`/`git diff`/`git log` are read-only — never follow them with `git add` or `git commit` unless Chris said "commit."
+> **No auto-committing**: Only commit when explicitly asked. `git status`/`git diff`/`git log` are read-only — never follow them with `git add` or `git commit` unless Chris said "commit." **This rule applies to the orchestrating session only. Sub-agents implementing phases MUST commit their work at the end of each phase — do NOT pass "do not commit" instructions to phase agents.**
 > **One step at a time**: When the implementation plan has numbered steps, complete only the current step before asking to proceed. Do not work ahead into future steps.
 > **No verbose paths**: Do not specify the working directory in commands when it matches the current directory (e.g. no `git -C /path/to/project`).
 > **Playground embeds**: Use `@playground(uuid, caption text)` — parentheses, NOT square brackets.
