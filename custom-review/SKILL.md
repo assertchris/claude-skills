@@ -2,7 +2,7 @@
 name: custom-review
 description: Comprehensive PR review that loops code review and blast radius analysis, repairing issues between each pass until both phases come back clean.
 user-invocable: true
-allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Bash(curl *), Read, Edit, Write, Glob
+allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Read, Edit, Write, Glob, mcp__friday__friday_pr_review_mark
 ---
 
 # Custom Review
@@ -246,16 +246,7 @@ Capture the URL output by `gh pr create` — it is printed to stdout on success.
 
 #### Record the fix PR as already-reviewed
 
-Immediately after the fix PR is opened, record a `pr.review.started` event for its URL so the automated review scheduler never picks it up:
-
-```bash
-source /home/friday/Code/friday.assertchris.dev/.env
-curl -s -X POST \
-  -H "Authorization: Bearer $FRIDAY_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"type\":\"pr.review.started\",\"source_id\":\"<fix-pr-url>\",\"summary\":\"Review fix PR — skip automated review\",\"user\":\"chris\",\"payload\":[{\"automated\":true}],\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
-  "$FRIDAY_API_URL/v1/events"
-```
+Immediately after the fix PR is opened, call `friday_pr_review_mark` with the fix PR's URL. This records a `pr.review.started` event so the automated scheduler permanently excludes it — no topic, no prompt injection, no side effects.
 
 ---
 
