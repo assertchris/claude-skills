@@ -2,7 +2,7 @@
 name: custom-review
 description: Comprehensive PR review that loops code review and blast radius analysis, repairing issues between each pass until both phases come back clean.
 user-invocable: true
-allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Read, Edit, Write, Glob
+allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Bash(curl *), Read, Edit, Write, Glob
 ---
 
 # Custom Review
@@ -188,15 +188,30 @@ Present the report to the user and call out anything still requiring human atten
 
 ---
 
-## Step 6 (Mode B only): Offer to Open a Review PR
+## Step 6 (Mode B only): Offer to Deliver Review Fixes
 
 Skip this step entirely for Mode A.
 
-After presenting the report, present a summary to Chris covering:
+### Check whether the PR branch exists in the upstream repo
+
+Before offering to open a PR, check whether `<headRefName>` exists as a branch in the repo (not just locally):
+
+```bash
+git ls-remote --heads origin <headRefName>
+```
+
+- **Branch exists** → a fix PR can safely target it. Follow the "Fix PR path" below.
+- **Branch does not exist** (e.g. the PR comes from a fork, or the branch was already deleted) → a fix PR would fall back to main and pull in unrelated commits. Follow the "Diff comment path" instead.
+
+---
+
+### Fix PR path (branch exists in upstream)
+
+Present a summary to Chris covering:
 
 1. What the review found.
 2. What changes were made on the review branch (`review/<pr-number>-<slug>`).
-3. What a fix PR would target: **review branch → `<headRefName>`** (the original PR's branch, NOT main).
+3. That a fix PR would target **review branch → `<headRefName>`** (the original PR's branch, NOT main).
 
 Then ask:
 
@@ -204,10 +219,10 @@ Then ask:
 
 **Wait for explicit confirmation before doing anything.**
 
-- If Chris says yes: open the PR.
-- If Chris says no or does not respond: stop. Do not open a PR automatically under any circumstances.
+- If Chris says yes: open the PR (see below).
+- If Chris says no or does not respond: stop.
 
-### Opening the review PR (only on explicit approval)
+#### Opening the review PR (only on explicit approval)
 
 ```bash
 gh pr create \
@@ -227,9 +242,56 @@ EOF
   --head review/<pr-number>-<slug>
 ```
 
+Capture the URL output by `gh pr create` — it is printed to stdout on success.
+
+#### Record the fix PR as already-reviewed
+
+Immediately after the fix PR is opened, record a `pr.review.started` event for its URL so the automated review scheduler never picks it up:
+
+```bash
+source /home/friday/Code/friday.assertchris.dev/.env
+curl -s -X POST \
+  -H "Authorization: Bearer $FRIDAY_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"pr.review.started\",\"source_id\":\"<fix-pr-url>\",\"summary\":\"Review fix PR — skip automated review\",\"user\":\"chris\",\"payload\":[{\"automated\":true}],\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+  "$FRIDAY_API_URL/v1/events"
+```
+
+---
+
+### Diff comment path (branch does not exist in upstream)
+
+A fix PR is not safe. Instead, post the review fixes as a diff comment directly on the original PR so the author can apply them manually.
+
+Generate the diff of everything on the review branch relative to the PR's head:
+
+```bash
+git -C /tmp/review-<pr-number> diff origin/<headRefName>...review/<pr-number>-<slug>
+```
+
+Post it as a comment on the original PR:
+
+```bash
+gh pr comment <number> --body "$(cat <<'EOF'
+## Review fixes (diff)
+
+The review branch could not be submitted as a PR because `<headRefName>` does not exist in the upstream repo (likely a fork). Apply these changes manually:
+
+\`\`\`diff
+[diff output]
+\`\`\`
+
+**What these fix:**
+[Bullet list from Step 5 "What was fixed".]
+EOF
+)"
+```
+
+Inform Chris that the diff has been posted as a comment and that no fix PR was opened.
+
 ### Clean up the worktree
 
-After the PR is opened (or after Chris declines), remove the temporary worktree:
+After the fix PR is opened, the diff comment is posted, or Chris declines — remove the temporary worktree:
 
 ```bash
 git worktree remove /tmp/review-<pr-number> --force
@@ -246,3 +308,4 @@ git worktree remove /tmp/review-<pr-number> --force
 - Max 5 rounds per phase. If not clean by round 5, report and wait for instruction.
 - **Never commit directly to the original PR's head branch in Mode B.** All commits go to the review branch only.
 - **Never open a review PR automatically.** Always ask first and wait for an explicit yes.
+- If you need to read or summarize something, consider using Haiki in a sub-agent to reduce token wastage. 
