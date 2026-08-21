@@ -244,9 +244,29 @@ EOF
 
 Capture the URL output by `gh pr create` — it is printed to stdout on success.
 
+#### Comment on the original PR
+
+Immediately after the fix PR is opened, post a comment on the **original** PR linking to it:
+
+```bash
+gh pr comment <number> --body "$(cat <<'EOF'
+## Automated review complete
+
+Friday has finished reviewing this PR and opened a fix PR with the suggested changes:
+
+**Fix PR:** <fix-pr-url>
+
+**What it fixes:**
+[Bullet list from Step 5 "What was fixed" — one line per fix.]
+
+Merge the fix PR into `<headRefName>` before landing this one.
+EOF
+)"
+```
+
 #### Record the fix PR as already-reviewed
 
-Immediately after the fix PR is opened, call `friday_pr_review_mark` with the fix PR's URL. This records a `pr.review.started` event so the automated scheduler permanently excludes it — no topic, no prompt injection, no side effects.
+Immediately after posting the comment, call `friday_pr_review_mark` with the fix PR's URL. This records a `pr.review.started` event so the automated scheduler permanently excludes it — no topic, no prompt injection, no side effects.
 
 ---
 
