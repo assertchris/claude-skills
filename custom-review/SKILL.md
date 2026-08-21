@@ -2,19 +2,18 @@
 name: custom-review
 description: Comprehensive PR review that loops code review and blast radius analysis, repairing issues between each pass until both phases come back clean.
 user-invocable: true
-allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(git *), Read, Edit, Write, Glob
+allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Read, Edit, Write, Glob
 ---
 
 # Custom Review
 
-Run a two-phase, self-healing review loop on a pull request:
-
-1. **Phase 1 — Code Review Loop**: Run the full code-review skill, fix everything it finds, repeat until clean (max 5 rounds).
-2. **Phase 2 — Blast Radius Loop**: Run the full blast-radius skill, fix everything it finds, repeat until clean (max 5 rounds).
+Run a two-phase, self-healing review loop on a pull request. The review operates in one of two modes depending on whose PR is being reviewed.
 
 ---
 
-## Step 1: Get PR Reference
+## Step 1: Determine Mode
+
+### Get the PR reference
 
 Parse the user's input for a PR number or GitHub PR link.
 
@@ -24,11 +23,62 @@ Parse the user's input for a PR number or GitHub PR link.
 
 Confirm the PR is open (not merged, not draft, not closed). If not open, stop and tell the user.
 
+Fetch PR metadata:
+
+```bash
+gh pr view <number> --json number,title,headRefName,baseRefName,author,url
+```
+
+### Determine the mode
+
+**Mode A — Own PR**: The PR's author matches Chris's GitHub username (`assertchris`), AND the current working branch already matches the PR's `headRefName`. In this case, fixes go directly onto the PR branch — no separate review branch is needed.
+
+**Mode B — Someone else's PR (automated review)**: The PR belongs to a different author, OR the current branch does not match the PR's head branch. In this case, a new review branch must be created.
+
 ---
 
-## Step 2: Phase 1 — Code Review Loop
+## Step 2 (Mode B only): Set Up Review Worktree and Branch
+
+Skip this step entirely for Mode A.
+
+### Check out the PR branch into a new worktree
+
+```bash
+# Fetch the PR branch
+git fetch origin <headRefName>
+
+# Create a worktree for the PR branch (do not disturb the current worktree)
+git worktree add /tmp/review-<pr-number> origin/<headRefName>
+```
+
+All subsequent git operations in Mode B run inside `/tmp/review-<pr-number>`.
+
+### Create a review branch off the PR branch
+
+```bash
+cd /tmp/review-<pr-number>
+git checkout -b review/<pr-number>-<slug>
+# <slug> is the PR title lowercased, spaces replaced with hyphens, max 40 chars
+git push -u origin review/<pr-number>-<slug>
+```
+
+Record:
+- **Review worktree**: `/tmp/review-<pr-number>`
+- **Review branch**: `review/<pr-number>-<slug>`
+- **Target branch** (what the review PR will merge into): `<headRefName>` (the original PR's branch — NOT main)
+
+All commits during the review go to the review branch. Never commit directly to `<headRefName>`.
+
+---
+
+## Step 3: Phase 1 — Code Review Loop
 
 Run the following loop up to **5 times**. Stop early if the review comes back clean.
+
+### Working directory
+
+- Mode A: current worktree root.
+- Mode B: `/tmp/review-<pr-number>`.
 
 ### Each iteration
 
@@ -41,11 +91,11 @@ Invoke the `/code-review` skill directly on PR #N. Do not spawn a sub-agent for 
 
 **Sub-agent — Code Repairer**
 
-Spawn a sub-agent. Give it the full issue list, the absolute path to the project root, and this instruction:
+Spawn a sub-agent. Give it the full issue list, the absolute working directory path, and this instruction:
 
 > You are a code repairer. Your job is to fix code issues and commit the result. You MUST commit and push before returning — do not summarise, do not report, do not stop at "here's what I'd change." Actually change the files, then commit and push.
 >
-> Working directory: [absolute path to project root]
+> Working directory: [absolute path — Mode A: project root, Mode B: /tmp/review-<pr-number>]
 >
 > For each issue in the list:
 > 1. Read the file at the given path.
@@ -65,7 +115,7 @@ If 5 rounds complete without a clean pass, stop and report the outstanding issue
 
 ---
 
-## Step 3: Phase 2 — Blast Radius Loop
+## Step 4: Phase 2 — Blast Radius Loop
 
 Run the following loop up to **5 times**. Stop early if the analysis comes back clean.
 
@@ -75,14 +125,16 @@ Run the following loop up to **5 times**. Stop early if the analysis comes back 
 
 Invoke the `change-blast-radius` skill directly on PR #N. Do not spawn a sub-agent for this — run it inline. Collect every RED or AMBER finding, every CRITICAL or HIGH security issue, and every Low or Medium effort test gap.
 
-- If nothing significant: Phase 2 is done. Move to Step 4.
+- If nothing significant: Phase 2 is done. Move to Step 5.
 - If findings: spawn the repairer.
 
 **Sub-agent — Blast Radius Repairer**
 
-Spawn a sub-agent. Give it the full findings list and this instruction:
+Spawn a sub-agent. Give it the full findings list and the working directory, and this instruction:
 
 > You are a code repairer. Your job is to fix code issues and push the result. You MUST push before returning.
+>
+> Working directory: [absolute path — Mode A: project root, Mode B: /tmp/review-<pr-number>]
 >
 > Fix every actionable finding in the list:
 > - CRITICAL/HIGH security findings: apply the minimal code fix.
@@ -101,9 +153,9 @@ If 5 rounds complete without a clean pass, stop and report the outstanding findi
 
 ---
 
-## Step 4: Final Report
+## Step 5: Final Report
 
-Post a comment on the review PR (child PR if one was created, otherwise the original PR):
+Post a comment on the PR being reviewed:
 
 ```bash
 gh pr comment <number> --body "<report>"
@@ -136,46 +188,51 @@ Present the report to the user and call out anything still requiring human atten
 
 ---
 
-## Step 5: Notify Original PR (child PR only)
+## Step 6 (Mode B only): Offer to Open a Review PR
 
-This step only applies when the review was of **someone else's PR** and a child review PR was opened (per the review workflow in preference 28: branch like `review/...` targeting the original PR's branch, not `main`).
+Skip this step entirely for Mode A.
 
-### Detect whether a child PR exists
+After presenting the report, present a summary to Chris covering:
 
-Check the current review PR's base branch:
+1. What the review found.
+2. What changes were made on the review branch (`review/<pr-number>-<slug>`).
+3. What a fix PR would target: **review branch → `<headRefName>`** (the original PR's branch, NOT main).
 
-```bash
-gh pr view <child-pr-number> --json baseRefName --jq '.baseRefName'
-```
+Then ask:
 
-- If the base branch is `main`, `master`, or `develop` → this is not a child PR. Skip Step 5.
-- Otherwise → the base branch is the original PR's branch. Continue.
+> "Do you want me to open a PR for these review changes? It would target `<headRefName>` (PR #<pr-number>'s branch), not main."
 
-### Find the original PR
+**Wait for explicit confirmation before doing anything.**
 
-```bash
-gh pr list --head <base-branch-name> --json number,title,url --jq '.[0]'
-```
+- If Chris says yes: open the PR.
+- If Chris says no or does not respond: stop. Do not open a PR automatically under any circumstances.
 
-If no PR is found for the base branch, skip Step 5 (nothing to notify).
-
-### Post a comment on the original PR
+### Opening the review PR (only on explicit approval)
 
 ```bash
-gh pr comment <original-pr-number> --body "<notification>"
-```
+gh pr create \
+  --title "Review fixes for PR #<pr-number>: <PR title>" \
+  --body "$(cat <<'EOF'
+## Review fixes for PR #<pr-number>
 
-Notification format:
-
-```markdown
-## Review fixes available — PR #[child-pr-number]
-
-A review of this PR surfaced issues that have been fixed in a separate branch. PR #[child-pr-number] ([child PR title]) targets this branch and should be merged here before this PR lands.
+This PR contains automated review fixes for #<pr-number> ([PR title]).
 
 **What it fixes:**
-[Bullet list of the fixes made, pulled from the Step 4 "What was fixed" section. Keep it concise — one line per fix.]
+[Bullet list of fixes from the Step 5 "What was fixed" section — one line per fix.]
 
-**To merge:** `gh pr merge [child-pr-number] --squash` (or review and merge via GitHub).
+**To merge:** merge this PR into `<headRefName>` before landing PR #<pr-number>.
+EOF
+)" \
+  --base <headRefName> \
+  --head review/<pr-number>-<slug>
+```
+
+### Clean up the worktree
+
+After the PR is opened (or after Chris declines), remove the temporary worktree:
+
+```bash
+git worktree remove /tmp/review-<pr-number> --force
 ```
 
 ---
@@ -187,3 +244,5 @@ A review of this PR surfaced issues that have been fixed in a separate branch. P
 - **Repairer sub-agents MUST run `git push` as their final act.** A repair that is not pushed never happened. Do not return from a repairer sub-agent without confirming `git push` exited 0.
 - If a fix is ambiguous or risky, the repairer sub-agent must surface it to the user — but still commit and push everything else first.
 - Max 5 rounds per phase. If not clean by round 5, report and wait for instruction.
+- **Never commit directly to the original PR's head branch in Mode B.** All commits go to the review branch only.
+- **Never open a review PR automatically.** Always ask first and wait for an explicit yes.
