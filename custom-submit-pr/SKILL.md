@@ -16,6 +16,8 @@ This skill pushes the current branch and creates a GitHub pull request using `gh
 Check ARGUMENTS for:
 - The word `draft` (case-insensitive) → set `DRAFT=true`, otherwise `DRAFT=false`
 - `doc-path:` key → if present, store its value as `DOC_PATH` to pass to `custom-pr-summary`
+- `base:` key → if present, store its value as `BASE_BRANCH` to use as `--base` in `gh pr create`. If absent, omit `--base` entirely (GitHub uses the repo default).
+- `body:` key → if present, store its value as `PRESET_BODY`. Skip Steps 4–5 (PR summary generation and style guide) and use `PRESET_BODY` directly as the PR body. The body is assumed to already be styled.
 
 ### Step 1: Validate Branch
 
@@ -23,7 +25,7 @@ Check ARGUMENTS for:
 git branch --show-current
 ```
 
-If on `main` or `master`, stop and inform Chris this doesn't make sense for the main branch.
+If on `main` or `master`, and no `base:` was provided, stop and inform Chris this doesn't make sense for the main branch. If `base:` is provided, a main-branch source is acceptable (e.g. review PRs).
 
 ### Step 2: Check for Unpushed Changes
 
@@ -81,7 +83,14 @@ Derive a short PR title (under 70 characters) from the feature doc heading or th
 
 ### Step 7: Create Pull Request
 
-If `DRAFT=false`:
+Build the `gh pr create` command with these flags:
+- `--assignee assertchris --reviewer assertchris`
+- `--title "<title>"`
+- `--body "<body>"`
+- `--draft` if `DRAFT=true`
+- `--base <BASE_BRANCH>` if `BASE_BRANCH` is set
+
+If `DRAFT=false` and no `BASE_BRANCH`:
 
 ```bash
 gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
@@ -93,17 +102,7 @@ EOF
 )"
 ```
 
-If `DRAFT=true`, add the `--draft` flag:
-
-```bash
-gh pr create --draft --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<rewritten summary from Step 5>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
-```
+If `BASE_BRANCH` is set, append `--base <BASE_BRANCH>` to whichever form above applies.
 
 ### Step 8: Report
 
