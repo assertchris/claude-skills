@@ -13,8 +13,10 @@ allowed-tools: Bash, Skill
 |---|---|---|
 | `doc-path:` | Explicit path to the plan/feature doc — passed through to `custom-pr-summary` | — |
 | `draft` | Create the PR as a draft | false |
+| `base:` | Override the PR base branch (passed through to `custom-submit-pr`) | repo default |
+| `body:` | Pre-composed PR body — skips summary generation and style guide in `custom-submit-pr` | — |
 
-Use the /custom-submit-pr skill to push and open a PR. Pass through any `doc-path:` and `draft` from ARGUMENTS unchanged.
+Use the /custom-submit-pr skill to push and open a PR. Pass through `doc-path:`, `draft`, `base:`, and `body:` from ARGUMENTS unchanged.
 
 Once the PR URL is returned, watch it for CI completion using a bash poll loop — stay in this session and run:
 
