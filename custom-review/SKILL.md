@@ -155,10 +155,29 @@ If 5 rounds complete without a clean pass, stop and report the outstanding findi
 
 ## Step 5: Final Report
 
-Post a comment on the PR being reviewed:
+### Style the report text
+
+Before posting anything, run the report body through the writing style guide:
+
+1. Write the report markdown to a temp file:
+   ```bash
+   REPORT_TMP=$(mktemp /tmp/review-report-XXXXXX.md)
+   cat > "$REPORT_TMP" <<'EOF'
+   [report content]
+   EOF
+   ```
+2. Invoke the `custom-writing-style-guide` skill on `$REPORT_TMP` in **batch mode** (pass the file path and the word `batch` as arguments).
+3. Read the styled content back from `$REPORT_TMP`.
+4. Delete the temp file: `rm "$REPORT_TMP"`.
+
+Use the styled content as the report body for all subsequent comment and PR body steps.
+
+### Post the report comment
+
+Post the styled report as a comment on the PR being reviewed:
 
 ```bash
-gh pr comment <number> --body "<report>"
+gh pr comment <number> --body "<styled report>"
 ```
 
 Report format:
@@ -224,10 +243,9 @@ Then ask:
 
 #### Opening the review PR (only on explicit approval)
 
-```bash
-gh pr create \
-  --title "Review fixes for PR #<pr-number>: <PR title>" \
-  --body "$(cat <<'EOF'
+Compose the PR body:
+
+```
 ## Review fixes for PR #<pr-number>
 
 This PR contains automated review fixes for #<pr-number> ([PR title]).
@@ -236,13 +254,15 @@ This PR contains automated review fixes for #<pr-number> ([PR title]).
 [Bullet list of fixes from the Step 5 "What was fixed" section — one line per fix.]
 
 **To merge:** merge this PR into `<headRefName>` before landing PR #<pr-number>.
-EOF
-)" \
-  --base <headRefName> \
-  --head review/<pr-number>-<slug>
 ```
 
-Capture the URL output by `gh pr create` — it is printed to stdout on success.
+Invoke the `custom-workflow-pr` skill with these arguments:
+
+```
+base: <headRefName>  body: <composed body above>
+```
+
+`custom-workflow-pr` passes both through to `custom-submit-pr`, which handles the writing style guide pass, `--assignee`, `--reviewer`, push, and CI watching. It returns the PR URL — capture it.
 
 #### Comment on the original PR
 
@@ -280,20 +300,27 @@ Generate the diff of everything on the review branch relative to the PR's head:
 git -C /tmp/review-<pr-number> diff origin/<headRefName>...review/<pr-number>-<slug>
 ```
 
+Style the prose sections of the comment body through the writing style guide (batch mode) before posting — the diff block itself is structural and must not be touched:
+
+1. Write the comment body (without the diff) to a temp file and invoke `custom-writing-style-guide` on it in **batch mode**.
+2. Read the styled prose back.
+3. Compose the final body with the styled prose wrapping the raw diff block.
+4. Delete the temp file.
+
 Post it as a comment on the original PR:
 
 ```bash
 gh pr comment <number> --body "$(cat <<'EOF'
 ## Review fixes (diff)
 
-The review branch could not be submitted as a PR because `<headRefName>` does not exist in the upstream repo (likely a fork). Apply these changes manually:
+<styled intro prose>
 
 \`\`\`diff
 [diff output]
 \`\`\`
 
 **What these fix:**
-[Bullet list from Step 5 "What was fixed".]
+[Bullet list from Step 5 "What was fixed" — styled.]
 EOF
 )"
 ```
