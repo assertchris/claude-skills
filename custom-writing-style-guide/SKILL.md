@@ -57,14 +57,41 @@ for each line:
 
 Prose blocks are contiguous runs of non-structural lines. Rewrite them as a unit (whole paragraph), not line by line.
 
-### 4. Ask Rewrite Mode
+### 4. Unslop Pass
+
+Before applying the style guide, scan each prose block for artificial language patterns and rewrite to eliminate them. This pass runs silently — no user interaction. The goal is to strip AI-sounding noise so the style pass works on clean human prose.
+
+**Pattern categories to eliminate:**
+
+*Content issues:* Puffery ("pivotal moment", "game-changer", "paradigm shift"), hollow "-ing phrases" that open sentences ("Leveraging our expertise…"), name-dropping without explanation, promotional adjectives ("nestled", "vibrant", "thriving"), vague attributions ("experts say", "studies show"), generic obstacles ("challenges", "hurdles").
+
+*Language problems:* AI vocabulary — "delve", "interplay", "testament", "nuanced", "tapestry", "underscore", "embark", "navigate", "landscape", "ecosystem" (when used metaphorically); inflated copulas ("serves as", "acts as", "functions as" when "is" works); "not just X, but Y" constructions; forced lists of three where two or four would be natural; synonym cycling (using five words for the same thing to avoid repetition).
+
+*Style concerns:* Excessive em dashes used as a tic rather than for genuine parenthetical emphasis; scattered boldfacing for emphasis (bold is structural, not decorative); headers that restate the list content beneath them; decorative emojis in prose; Title Case headings (convert to sentence case).
+
+*Communication artifacts:* Chatbot phrases ("I hope this helps!", "Feel free to…", "Don't hesitate to…"); false praise ("Great question!", "Absolutely!"); cutoff disclaimers ("As of my knowledge cutoff…").
+
+*Filler:* Verbose phrases ("In order to" → "To", "Due to the fact that" → "Because", "At this point in time" → "Now"); over-hedging ("it's worth noting that", "it's important to mention"); generic conclusions that restate the intro.
+
+*Jargon:* Abstract metaphor nouns used as filler — "substrate", "vector", "flywheel", "north star", "unlock", "leverage" (as a verb).
+
+**Rewrite rules:**
+- Replace passive voice with active where natural
+- Break dense compound sentences into two shorter ones
+- Prefer mechanisms over metaphors — say what a thing actually does, not what it resembles
+- Remove sentences that restate what the previous sentence already said
+- Replace weak verbs ("utilize" → "use", "facilitate" → "help", "implement" → "build" or "add")
+
+**What stays:** Data tables, enumerable lists, the author's own terminology, structural bolding (e.g. term definitions), short punchy sentences, and any passage that reads as direct and specific already.
+
+### 5. Ask Rewrite Mode
 
 Use `AskUserQuestion`: "Review each section, or rewrite the whole file at once?"
 
 - **Interactive** (recommended for first use): show each rewritten section and ask for approval before continuing
 - **Batch**: rewrite the entire file at once without pausing for review
 
-### 5. Rewrite Prose
+### 6. Rewrite Prose
 
 Process section by section (delimited by heading lines), applying the style guide.
 
@@ -75,11 +102,11 @@ Within prose blocks, preserve exactly:
 - Link URLs (link text can be rewritten)
 - Technical accuracy and information density
 
-### 6. Write the Result
+### 7. Write the Result
 
 Write the rewritten content back to the same file using `Edit` or `Write`. Git provides the safety net.
 
-### 7. Verify Structural Integrity
+### 8. Verify Structural Integrity
 
 Re-read the written file and confirm:
 - Heading count and text matches the original
