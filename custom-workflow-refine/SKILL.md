@@ -1,5 +1,5 @@
 ---
-name: custom-refine
+name: custom-workflow-refine
 user-invocable: true
 description: Refine a Friday note or plan doc over 25 iterations, finding and resolving gaps, assumptions, and ambiguities. Invoked when Chris says "refine this note/plan".
 allowed-tools: Bash, mcp__friday__friday_notes_get, mcp__friday__friday_notes_update, Read, Edit, Write

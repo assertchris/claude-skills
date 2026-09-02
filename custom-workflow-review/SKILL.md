@@ -1,5 +1,5 @@
 ---
-name: custom-review
+name: custom-workflow-review
 description: Comprehensive PR review that loops code review and blast radius analysis, repairing issues between each pass until both phases come back clean.
 user-invocable: true
 allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh pr create:*), Bash(gh pr merge:*), Bash(git *), Read, Edit, Write, Glob, mcp__friday__friday_pr_review_avoid

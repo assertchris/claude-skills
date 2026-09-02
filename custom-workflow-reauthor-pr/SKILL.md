@@ -1,5 +1,5 @@
 ---
-name: custom-reauthor-pr
+name: custom-workflow-reauthor-pr
 user-invocable: true
 description: Re-authors all commits on a GitHub PR branch from fridaytherobot to assertchris (Christopher Pitt), preserving commit messages and Co-Authored-By lines. Use when user asks to re-author a PR, claim a PR, take ownership of PR commits, or sign commits on a bot PR.
 allowed-tools: Bash(git *, gh *)

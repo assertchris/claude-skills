@@ -1,5 +1,5 @@
 ---
-name: custom-maintain-prs
+name: custom-workflow-maintain-prs
 user-invocable: true
 description: Maintain all open PRs — address unresolved review feedback, rebase outdated branches, and resolve merge conflicts. Run this to keep all open PRs clean and up to date.
 allowed-tools: Bash, Agent, Read, Edit, Glob, mcp__friday__friday_github_search_prs, mcp__friday__friday_pr_review_list_projects
