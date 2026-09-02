@@ -1,5 +1,5 @@
 ---
-name: custom-review-status
+name: custom-maintain-reviews
 description: Show in-flight PR reviews (started but not resolved), with cleanup options for merged/closed PRs.
 user-invocable: true
 allowed-tools: Bash(gh pr view:*), Bash(gh pr list:*), Bash(git worktree list:*), Bash(git worktree remove:*), Bash(git push:*), Bash(git branch:*), Bash(ls:*), Bash(curl:*), mcp__friday__friday_pr_review_resolve
