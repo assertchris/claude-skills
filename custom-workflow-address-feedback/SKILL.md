@@ -212,10 +212,22 @@ Otherwise reply acknowledging the comment or answering the question, then resolv
 
 ### Reply format
 
-Post a reply to a thread using the PR review comment API. The `databaseId` for the in-reply-to parameter is `thread.comments.nodes[0].databaseId`.
+Before posting any reply, pass the draft body through the writing style guide to ensure it matches Chris's voice — not Claude's default tone.
+
+1. Write the draft reply body to a temp file:
+   ```bash
+   echo "{draft reply body}" > /tmp/friday-reply-draft.md
+   ```
+2. Invoke the writing style guide skill on that file (batch mode — no interactive prompt):
+   ```
+   Skill: custom-writing-style-guide /tmp/friday-reply-draft.md
+   ```
+3. Read the rewritten content back from `/tmp/friday-reply-draft.md` and use it as the final reply body.
+
+Then post the reply using the PR review comment API. The `databaseId` for the in-reply-to parameter is `thread.comments.nodes[0].databaseId`.
 
 ```bash
-jq -n --arg body "{reply body here}" '{body: $body}' \
+jq -n --arg body "{final reply body after style guide}" '{body: $body}' \
   | gh api -X POST \
       repos/{owner}/{repo}/pulls/{prNumber}/comments/{databaseId}/replies \
       --input -
