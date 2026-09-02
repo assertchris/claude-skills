@@ -185,23 +185,36 @@ Report format:
 ```markdown
 # Review Complete: [PR title] (#[number])
 
-**Code review rounds**: N | **Blast radius rounds**: N
+**Code review rounds**: N | **Blast radius rounds**: N | **Overall**: GREEN/AMBER/RED — [one-line verdict]
 
-## What was fixed
-[Bullet list of every issue fixed across all rounds, grouped by phase.]
+<details>
+<summary>QA Readiness</summary>
 
-## Still requires human attention
-[Tenant divergences, High-effort test gaps, or anything that could not be automatically repaired. Empty if none.]
-
-## QA Readiness
 | Area | Status | Summary |
 |------|--------|---------|
 | Security | GREEN/AMBER/RED | [one line] |
 | Test coverage | GREEN/AMBER/RED | [one line] |
 | Tenant safety | GREEN/AMBER/RED | [one line] |
 | Deployment risk | GREEN/AMBER/RED | [one line] |
-| **Overall** | **GREEN/AMBER/RED** | **[Ready / Blocked — reason]** |
+
+</details>
+
+<details>
+<summary>Still requires human attention (N items)</summary>
+
+[Bullet list of tenant divergences, high-effort test gaps, or anything that could not be automatically repaired. If none, write a single item: "Nothing — all issues were resolved automatically."]
+
+</details>
+
+<details>
+<summary>What was fixed (N issues across N rounds)</summary>
+
+[Bullet list of every issue fixed across all rounds, grouped by phase and round.]
+
+</details>
 ```
+
+**Collapsible rule — no exceptions**: Every table, every list, and every code or diff block in the report must be inside a `<details>`/`<summary>` block. The only content that appears outside a `<details>` block is the heading, the round/overall status line, and any single-sentence prose. Summary lines must be descriptive and include counts where applicable (e.g. "What was fixed (12 issues across 3 rounds)", "Still requires human attention (3 items)") — never just "Details".
 
 Present the report to the user and call out anything still requiring human attention.
 
@@ -315,12 +328,21 @@ gh pr comment <number> --body "$(cat <<'EOF'
 
 <styled intro prose>
 
+<details>
+<summary>Suggested diff (click to expand)</summary>
+
 \`\`\`diff
 [diff output]
 \`\`\`
 
-**What these fix:**
+</details>
+
+<details>
+<summary>What these fix (N issues)</summary>
+
 [Bullet list from Step 5 "What was fixed" — styled.]
+
+</details>
 EOF
 )"
 ```
