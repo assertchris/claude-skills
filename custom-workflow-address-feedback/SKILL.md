@@ -32,7 +32,7 @@ Try to discover the PR URL for the current branch:
 gh pr view --json url --jq '.url' 2>/dev/null
 ```
 
-If that returns a non-empty URL, use it. If it fails or returns nothing, search the session context for a GitHub PR URL. If still not found, call `friday_telegram_search` with the current branch name as the query and look for a PR URL in recent messages.
+If that returns a non-empty URL, use it. If it fails or returns nothing, search the session context for a GitHub PR URL. If still not found, call `friday_messages_list` with the current session's topic ID (the numeric suffix of the session scope, e.g. `user::chris::96` → topic ID `96`) and scan the returned messages for a PR URL matching the current branch name.
 
 If no PR URL can be found after all three attempts, stop and report: "Could not find a PR URL for the current branch."
 
