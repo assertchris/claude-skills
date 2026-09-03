@@ -85,13 +85,24 @@ If the command exits **0** (the base is already an ancestor of HEAD), the branch
 
 If the command exits **1** (the base has moved ahead of the PR branch), the branch is outdated. Continue to Step 3d.
 
-### 3d — Attempt rebase
+### 3d — Attempt rebase, without touching authorship
+
+This workflow's job is to keep branches current, never to change who a commit is attributed to — that's what `custom-workflow-reauthor-pr` is for, on explicit request only. A plain `git rebase` preserves the **author** of each commit automatically, but it always re-stamps the **committer** field with whatever identity the running process resolves to (`GIT_COMMITTER_NAME`/`EMAIL` env, else `user.name`/`user.email` from git config). If this maintenance workflow runs as `friday`, that silently swaps the committer to the bot on every commit it touches — which is exactly the "third avatar" bug that `custom-workflow-reauthor-pr` exists to fix, reintroduced by routine maintenance.
+
+Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything, so the rebase's effect can be verified:
 
 ```bash
-git rebase origin/{baseRefName}
+PRE_HEAD=$(git rev-parse HEAD)
+git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/pre-rebase-identities.txt
 ```
 
-If the rebase **succeeds** (exit 0 and no conflict markers), skip to Step 3e.
+Force the committer identity to match the author so the rebase can't drift it to the bot's identity:
+
+```bash
+export GIT_COMMITTER_NAME="Christopher Pitt"
+export GIT_COMMITTER_EMAIL="cgpitt@gmail.com"
+git rebase origin/{baseRefName}
+```
 
 If the rebase **fails with conflicts**:
 
@@ -99,13 +110,28 @@ If the rebase **fails with conflicts**:
 git rebase --abort
 ```
 
-Then invoke the `custom-conflict-resolution` skill. That skill will re-attempt the rebase, resolve conflicts file by file, and complete the rebase.
+Then invoke the `custom-conflict-resolution` skill. That skill will re-attempt the rebase, resolve conflicts file by file, and complete the rebase. After it completes, continue below.
 
-After the skill completes, continue to Step 3e.
+**After any rebase that completes (clean or via conflict resolution), verify authorship was preserved before pushing:**
+
+```bash
+git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/post-rebase-identities.txt
+diff /tmp/pre-rebase-identities.txt /tmp/post-rebase-identities.txt
+```
+
+If this diff is **not empty** — any commit's author, committer, or Co-Authored-By trailers changed — the rebase must not be pushed:
+
+```bash
+git reset --hard "$PRE_HEAD"
+```
+
+Log this PR as `"rebase skipped — authorship guard failed, needs manual reauthor"` and move to Step 3f without pushing. Do not attempt to fix it automatically; that's a job for `custom-workflow-reauthor-pr` run deliberately, not something this maintenance pass should do as a side effect.
+
+If the diff is empty, continue to Step 3e.
 
 ### 3e — Push the updated branch
 
-After a successful rebase (whether clean or after conflict resolution), force-push:
+After a successful rebase that passed the authorship guard above (whether clean or after conflict resolution), force-push:
 
 ```bash
 git push --force-with-lease origin {headRefName}
@@ -120,6 +146,7 @@ Append to `prResults`:
 - Whether feedback was addressed (and how many threads)
 - Whether a rebase was performed
 - Whether conflicts were resolved
+- Whether the authorship guard passed (or blocked the push)
 - Whether the push succeeded
 
 ## Step 4 — Print summary
@@ -130,13 +157,16 @@ After all PRs have been processed, print a summary table:
 PR Maintenance Complete
 
 {prUrl}
-  Feedback : {addressed N threads | no unresolved threads}
-  Rebase   : {rebased cleanly | conflicts resolved | already up to date | skipped}
-  Push     : {pushed | failed | not needed}
+  Feedback   : {addressed N threads | no unresolved threads}
+  Rebase     : {rebased cleanly | conflicts resolved | already up to date | skipped}
+  Authorship : {preserved | guard blocked push — needs manual reauthor}
+  Push       : {pushed | failed | not needed}
 
 {prUrl2}
   ...
 ```
+
+If any PR's authorship guard blocked a push, call that out clearly in the summary — it needs Chris to run `custom-workflow-reauthor-pr` deliberately, not a silent rebase.
 
 If any PRs were skipped because their repo isn't in the review project list, list them separately:
 
@@ -144,3 +174,8 @@ If any PRs were skipped because their repo isn't in the review project list, lis
 Skipped (not in review project list):
   - {nameWithOwner} — {prUrl}
 ```
+
+## Don'ts
+
+1. **DON'T** let a routine rebase silently change any commit's author, committer, or Co-Authored-By trailers — verify with the identity diff in Step 3d before every push
+2. **DON'T** try to fix an authorship-guard failure automatically — log it and move on; reauthoring is `custom-workflow-reauthor-pr`'s job, run deliberately, not a side effect of maintenance
