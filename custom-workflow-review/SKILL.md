@@ -157,20 +157,9 @@ If 5 rounds complete without a clean pass, stop and report the outstanding findi
 
 ### Style the report text
 
-Before posting anything, run the report body through the writing style guide:
+Before posting anything, run the report body through the writing style guide.
 
-1. Write the report markdown to a temp file:
-   ```bash
-   REPORT_TMP=$(mktemp /tmp/review-report-XXXXXX.md)
-   cat > "$REPORT_TMP" <<'EOF'
-   [report content]
-   EOF
-   ```
-2. Invoke the `custom-writing-style-guide` skill on `$REPORT_TMP` in **batch mode** (pass the file path and the word `batch` as arguments).
-3. Read the styled content back from `$REPORT_TMP`.
-4. Delete the temp file: `rm "$REPORT_TMP"`.
-
-Use the styled content as the report body for all subsequent comment and PR body steps.
+Invoke `custom-writing-style-guide` with the report markdown passed directly as the argument (raw text mode — not a file path). Use the returned text as the report body for all subsequent comment and PR body steps.
 
 ### Post the report comment
 
@@ -313,12 +302,9 @@ Generate the diff of everything on the review branch relative to the PR's head:
 git -C /tmp/review-<pr-number> diff origin/<headRefName>...review/<pr-number>-<slug>
 ```
 
-Style the prose sections of the comment body through the writing style guide (batch mode) before posting — the diff block itself is structural and must not be touched:
+Style the prose sections of the comment body through the writing style guide before posting — the diff block itself is structural and must not be touched.
 
-1. Write the comment body (without the diff) to a temp file and invoke `custom-writing-style-guide` on it in **batch mode**.
-2. Read the styled prose back.
-3. Compose the final body with the styled prose wrapping the raw diff block.
-4. Delete the temp file.
+Invoke `custom-writing-style-guide` with the prose portion (without the diff) passed directly as the argument (raw text mode). Use the returned text to compose the final body, wrapping the raw diff block.
 
 Post it as a comment on the original PR:
 
