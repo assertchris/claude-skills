@@ -125,7 +125,7 @@ If this diff is **not empty** — any commit's author, committer, or Co-Authored
 git reset --hard "$PRE_HEAD"
 ```
 
-Log this PR as `"rebase skipped — authorship guard failed, needs manual reauthor"` and move to Step 3f without pushing. Do not attempt to fix it automatically; that's a job for `custom-workflow-reauthor-pr` run deliberately, not something this maintenance pass should do as a side effect.
+A non-empty diff here almost always means this PR was already reauthored by `custom-workflow-reauthor-pr` (author/committer set to Chris, trailers filled in), and this routine rebase would have silently reverted that work back to the bot's identity — requiring the reauthor to be redone from scratch. Don't let that happen: log this PR as `"rebase skipped — would have overwritten prior reauthoring, rerun custom-workflow-reauthor-pr after this if the rebase is still needed"` and move to Step 3f without pushing. Do not attempt to fix it automatically — that's `custom-workflow-reauthor-pr` run deliberately, not something this maintenance pass should do as a side effect.
 
 If the diff is empty, continue to Step 3e.
 
@@ -159,14 +159,14 @@ PR Maintenance Complete
 {prUrl}
   Feedback   : {addressed N threads | no unresolved threads}
   Rebase     : {rebased cleanly | conflicts resolved | already up to date | skipped}
-  Authorship : {preserved | guard blocked push — needs manual reauthor}
+  Authorship : {preserved | guard blocked push — rebase would have undone prior reauthoring}
   Push       : {pushed | failed | not needed}
 
 {prUrl2}
   ...
 ```
 
-If any PR's authorship guard blocked a push, call that out clearly in the summary — it needs Chris to run `custom-workflow-reauthor-pr` deliberately, not a silent rebase.
+If any PR's authorship guard blocked a push, call that out clearly in the summary — that PR was already reauthored and is now behind its base branch again; it needs Chris to run `custom-workflow-reauthor-pr` deliberately if he still wants it rebased, not a silent maintenance rebase that would wipe the reauthoring out.
 
 If any PRs were skipped because their repo isn't in the review project list, list them separately:
 
@@ -178,4 +178,4 @@ Skipped (not in review project list):
 ## Don'ts
 
 1. **DON'T** let a routine rebase silently change any commit's author, committer, or Co-Authored-By trailers — verify with the identity diff in Step 3d before every push
-2. **DON'T** try to fix an authorship-guard failure automatically — log it and move on; reauthoring is `custom-workflow-reauthor-pr`'s job, run deliberately, not a side effect of maintenance
+2. **DON'T** treat an authorship-guard failure as "this PR needs reauthoring" — it means reauthoring was **already done** and this rebase would have destroyed it. Log it and move on; re-running the rebase is fine only after `custom-workflow-reauthor-pr` restores attribution, run deliberately by Chris, never as a side effect of maintenance
