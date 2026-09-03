@@ -51,6 +51,14 @@ git log --format="%H %an" <base-branch>..<head-branch>
 
 Only rewrite commits where the author is the bot (`fridaytherobot` or `friday` — check the actual author name/email in this repo's log, since it varies). Leave any other commits (e.g. human teammates) untouched.
 
+Compute the actual merge-base rather than using the base branch's current tip — the base branch may have moved on since the PR forked, and rebasing onto its live tip pulls in unrelated upstream history alongside the author rewrite, silently changing the PR's diff:
+
+```bash
+BASE_SHA=$(git merge-base <base-branch> <head-branch>)
+```
+
+Use `$BASE_SHA` (not `<base-branch>`) as the rebase target in Step 4.
+
 ### Step 4: Rebase with author rewrite and byline fix
 
 Use `git rebase` with `--exec` to, for each bot commit: rewrite the author, and add a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer only if one is entirely absent. If a commit already has any `Co-Authored-By: Claude ...` trailer, don't touch it. Do this with a small script rather than a one-liner, e.g.:
@@ -70,7 +78,7 @@ if ! printf '%s' "$msg" | grep -q '^Co-Authored-By: Claude'; then
 fi
 SCRIPT
 chmod +x /tmp/reauthor-fix.sh
-git rebase <base-branch> --exec '/tmp/reauthor-fix.sh <bot-name> "<model-name>"'
+git rebase "$BASE_SHA" --exec '/tmp/reauthor-fix.sh <bot-name> "<model-name>"'
 ```
 
 Ask Chris which model name to use for any trailer-less commits before running this — don't guess or default to a specific version, since the right answer depends on what was actually used at the time and Chris is the authority on that, not the assistant's own (possibly stale) model knowledge.
@@ -80,10 +88,11 @@ If the rebase encounters conflicts, stop and inform Chris. Do not resolve confli
 ### Step 5: Verify
 
 ```bash
-git log --format="%H %an <%ae> %B" <base-branch>..<head-branch>
+git log --format="%H %an <%ae> %B" "$BASE_SHA"..<head-branch>
+git diff <original-head-sha> <head-branch> --stat
 ```
 
-Confirm all previously-bot commits now show `Christopher Pitt <cgpitt@gmail.com>` as the author, that any pre-existing `Co-Authored-By: Claude ...` trailers are byte-for-byte unchanged, and that commits which previously had no trailer now have one with the model name Chris specified.
+Confirm all previously-bot commits now show `Christopher Pitt <cgpitt@gmail.com>` as the author, that any pre-existing `Co-Authored-By: Claude ...` trailers are byte-for-byte unchanged, and that commits which previously had no trailer now have one with the model name Chris specified. The `git diff --stat` against the original (pre-rebase) head SHA should come back empty — that's proof the rebase only touched authorship/trailers and didn't drag in unrelated content from a moved base branch.
 
 ### Step 6: Force push
 
@@ -102,9 +111,10 @@ Show Chris the updated commit list and the PR URL.
 3. **DON'T** resolve rebase conflicts — stop and inform Chris
 4. **DON'T** use `--force` — always use `--force-with-lease`
 5. **DON'T** modify the base branch or any commits outside the PR
-6. **DON'T** leave a commit without a Claude Co-Authored-By trailer
-7. **DON'T** change, "correct", or second-guess a model name already present in an existing trailer — the assistant's own model knowledge can be stale, Chris's word on what's a real model is authoritative
-8. **DON'T** guess which model name to use for a missing trailer — ask Chris
+6. **DON'T** rebase onto the base branch's current tip — use the actual merge-base (`$BASE_SHA`), so no unrelated upstream commits leak into the diff
+7. **DON'T** leave a commit without a Claude Co-Authored-By trailer
+8. **DON'T** change, "correct", or second-guess a model name already present in an existing trailer — the assistant's own model knowledge can be stale, Chris's word on what's a real model is authoritative
+9. **DON'T** guess which model name to use for a missing trailer — ask Chris
 
 ## Success Criteria
 
