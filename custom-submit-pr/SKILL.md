@@ -61,11 +61,31 @@ Invoke the `custom-writing-style-guide` skill, passing the summary text from Ste
 
 Use the returned text as the PR body.
 
-### Step 6: Determine PR Title
+### Step 6: Assess for QA Checklist
+
+Check whether the branch includes user-facing, externally testable changes by inspecting the diff against the base branch (or `main` if no base is set):
+
+```bash
+git diff --name-only main...HEAD
+```
+
+Look for files that suggest UI or user-facing changes. Indicators include:
+- Frontend files: `.vue`, `.tsx`, `.jsx`, `.ts` (in `resources/`, `src/`, `components/`, `pages/`, `views/`), `.html`, `.blade.php`, `.css`, `.scss`, `.svelte`
+- Route files that add new browser-accessible endpoints
+- Any file path containing `ui`, `frontend`, `web`, `views`, `pages`, `components`, or `templates`
+
+**If any such files are present**, invoke the `custom-qa-checklist` skill. It will return a checklist or indicate the change is backend-only.
+
+- If the skill returns a meaningful checklist (not a "backend-only, nothing to QA" response), store it as `QA_CHECKLIST`.
+- If the skill returns a backend-only notice or no checklist, set `QA_CHECKLIST` to empty and skip.
+
+**If no UI-related files are found**, set `QA_CHECKLIST` to empty and skip this skill entirely.
+
+### Step 7: Determine PR Title
 
 Derive a short PR title (under 70 characters) from the feature doc heading or the summary. Use imperative mood (e.g., "Add tutorial system foundation", not "Added" or "Adds"). Apply the writing style guide voice to the title too — keep it punchy and direct.
 
-### Step 7: Create Pull Request
+### Step 8: Create Pull Request
 
 Build the `gh pr create` command with these flags:
 - `--assignee assertchris --reviewer assertchris`
@@ -74,7 +94,12 @@ Build the `gh pr create` command with these flags:
 - `--draft` if `DRAFT=true`
 - `--base <BASE_BRANCH>` if `BASE_BRANCH` is set
 
-If `DRAFT=false` and no `BASE_BRANCH`:
+Construct the PR body as follows:
+- Always include `## Summary` with the styled summary from Step 5.
+- If `QA_CHECKLIST` is non-empty, append it after the summary under a `## QA Checklist` heading.
+- Always end with the `🤖 Generated with [Claude Code]` attribution line.
+
+Without a QA checklist:
 
 ```bash
 gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
@@ -86,15 +111,30 @@ EOF
 )"
 ```
 
+With a QA checklist:
+
+```bash
+gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
+## Summary
+<rewritten summary from Step 5>
+
+## QA Checklist
+<QA_CHECKLIST content from Step 6>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
 If `BASE_BRANCH` is set, append `--base <BASE_BRANCH>` to whichever form above applies.
 
-### Step 8: Report
+### Step 9: Report
 
-Output the PR URL so Chris can see it. If it was created as a draft, say so explicitly.
+Output the PR URL so Chris can see it. If it was created as a draft, say so explicitly. If a QA checklist was included, mention it briefly.
 
 ## Don'ts
 
-1. **DON'T** include checkboxes, test plans, or checklists in the PR body
+1. **DON'T** include checkboxes, test plans, or checklists in the PR body unless `QA_CHECKLIST` was generated in Step 6
 2. **DON'T** include "Files Changed" or "Key Review Areas" sections
 3. **DON'T** commit uncommitted changes — only push and create the PR
 4. **DON'T** assign or add as reviewer anyone other than `assertchris`
