@@ -1,36 +1,39 @@
 ---
 name: custom-writing-style-guide
-description: Apply a personal writing style guide to rewrite prose in markdown files.
-allowed-tools: Read, Write, Edit, Glob, AskUserQuestion, Bash
+description: Apply a personal writing style guide to rewrite prose in markdown files or inline text.
+allowed-tools: Read, Write, Edit, Glob, Bash
 user-invocable: true
 ---
 
 # Writing Style Guide (Generic)
 
-Rewrite prose in markdown files to match Chris's voice, preserving all structural elements exactly.
+Rewrite prose to match Chris's voice, preserving all structural elements exactly.
 
 ## Process
 
 ### 1. Resolve the Input
 
-Accept a file path or glob pattern as the argument (e.g. `docs/intro.md` or `docs/**/*.md`).
+ARGUMENTS may contain one of:
 
-- If ARGUMENTS contains a file path or glob pattern: use it directly
-- If **no argument** is given: use `AskUserQuestion` to ask for a file path or glob pattern (e.g. `docs/**/*.md`)
+- **A file path or glob pattern** (e.g. `docs/intro.md` or `docs/**/*.md`) — process the file(s) and write results back in place
+- **Raw text** (anything that is not a valid file path or glob) — rewrite the text in memory and return the result as output; do not write to any file
+- **Nothing** — stop and tell the caller to provide either a file path or raw text
 
-Expand globs with `Glob` to get the list of files to process. If the resolved file list is empty, inform the user and stop.
+To distinguish: check whether ARGUMENTS looks like a file path or glob (contains `/`, `~`, or ends in `.md`, `**`, `*`). If it matches an existing file or glob, treat it as file mode. Otherwise treat it as raw text mode.
 
-Only process markdown files (`.md`). If a non-markdown file is specified, inform the user and stop.
+In **file mode**: expand globs with `Glob`. If the resolved file list is empty, inform the caller and stop. Only process markdown files (`.md`).
+
+In **text mode**: the entire ARGUMENTS string is the text to rewrite. Return the rewritten text as plain output when done.
 
 ### 2. Load the Style Guide
 
 Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`.
 
-If the file is missing, inform the user and stop.
+If the file is missing, stop and report the error.
 
-### 3. Load and Parse the File
+### 3. Parse the Content
 
-For each resolved file, read it and classify each line using the following state machine:
+For each file (file mode) or the raw text (text mode), classify each line using the following state machine:
 
 ```
 STATE = "prose"
@@ -59,7 +62,7 @@ Prose blocks are contiguous runs of non-structural lines. Rewrite them as a unit
 
 ### 4. Unslop Pass
 
-Before applying the style guide, scan each prose block for artificial language patterns and rewrite to eliminate them. This pass runs silently — no user interaction. The goal is to strip AI-sounding noise so the style pass works on clean human prose.
+Before applying the style guide, scan each prose block for artificial language patterns and rewrite to eliminate them. This pass runs silently. The goal is to strip AI-sounding noise so the style pass works on clean human prose.
 
 **Pattern categories to eliminate:**
 
@@ -84,37 +87,26 @@ Before applying the style guide, scan each prose block for artificial language p
 
 **What stays:** Data tables, enumerable lists, the author's own terminology, structural bolding (e.g. term definitions), short punchy sentences, and any passage that reads as direct and specific already.
 
-### 5. Ask Rewrite Mode
+### 5. Rewrite Prose
 
-Use `AskUserQuestion`: "Review each section, or rewrite the whole file at once?"
-
-- **Interactive** (recommended for first use): show each rewritten section and ask for approval before continuing
-- **Batch**: rewrite the entire file at once without pausing for review
-
-### 6. Rewrite Prose
-
-Process section by section (delimited by heading lines), applying the style guide.
-
-In **interactive mode**: show the rewritten prose for each section and ask for approval via `AskUserQuestion` before moving to the next.
+Process all prose blocks, applying the style guide. No pausing, no section-by-section approval — rewrite everything at once.
 
 Within prose blocks, preserve exactly:
 - Inline code references (`` `velocityY` ``, `` `btn()` ``)
 - Link URLs (link text can be rewritten)
 - Technical accuracy and information density
 
-### 7. Write the Result
+### 6. Output the Result
 
-Write the rewritten content back to the same file using `Edit` or `Write`. Git provides the safety net.
-
-### 8. Verify Structural Integrity
-
-Re-read the written file and confirm:
+**File mode:** Write the rewritten content back to the same file(s) using `Edit` or `Write`. Then verify structural integrity:
 - Heading count and text matches the original
 - Fenced code block count matches the original
 - Empty line count is within reasonable range of the original
 - No `@directive` lines were modified
 
-Report any discrepancies to the user.
+Report any discrepancies.
+
+**Text mode:** Output the rewritten text directly. Do not write to any file.
 
 ## Don'ts
 
@@ -130,3 +122,4 @@ Report any discrepancies to the user.
 10. **DON'T** change the meaning of a sentence, only the voice and style
 11. **DON'T** add emojis, marketing language, or filler phrases
 12. **DON'T** modify `@directive` lines — leave any `@snippet`, `@playground`, `@banner`, `@palette`, or similar directives exactly as found
+13. **DON'T** ask the user anything — no `AskUserQuestion`, no mode selection, no confirmation prompts
