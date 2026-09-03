@@ -2,7 +2,7 @@
 name: custom-submit-pr
 user-invocable: true
 description: Creates a GitHub pull request using gh CLI, with a description generated from the PR summary skill and styled with the writing style guide, assigned to and reviewed by assertchris. Use when user asks to make a PR, create a PR, submit a PR, or open a pull request. Supports draft PRs when the user says "draft PR" or "draft pull request".
-allowed-tools: Bash(git *, gh *, mktemp, cat, rm), Read, Write, Glob, Skill
+allowed-tools: Bash(git *, gh *), Read, Write, Glob, Skill
 ---
 
 # Submit Pull Request
@@ -57,25 +57,9 @@ Take the generated summary — only the "Summary" section content, no "Key Revie
 
 ### Step 5: Apply Writing Style Guide
 
-Write the summary text to a temporary markdown file:
+Invoke the `custom-writing-style-guide` skill, passing the summary text from Step 4 directly as the argument (raw text mode — not a file path). The skill will return the rewritten text as output.
 
-```bash
-TMPFILE=$(mktemp /tmp/pr-summary-XXXXXX.md)
-cat > "$TMPFILE" <<'EOF'
-<summary content from Step 4>
-EOF
-```
-
-Invoke the `custom-writing-style-guide` skill with the temp file path as the argument, using **batch mode** (no interactive review). This rewrites the prose to match Chris's voice.
-
-Read back the rewritten content from the temp file, then delete it:
-
-```bash
-cat "$TMPFILE"
-rm "$TMPFILE"
-```
-
-Use the rewritten content as the PR body.
+Use the returned text as the PR body.
 
 ### Step 6: Determine PR Title
 
