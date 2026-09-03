@@ -87,16 +87,14 @@ If the command exits **1** (the base has moved ahead of the PR branch), the bran
 
 ### 3d — Attempt rebase, without touching authorship
 
-This workflow's job is to keep branches current, never to change who a commit is attributed to — that's what `custom-workflow-reauthor-pr` is for, on explicit request only. A plain `git rebase` preserves the **author** of each commit automatically, but it always re-stamps the **committer** field with whatever identity the running process resolves to (`GIT_COMMITTER_NAME`/`EMAIL` env, else `user.name`/`user.email` from git config). If this maintenance workflow runs as `friday`, that silently swaps the committer to the bot on every commit it touches — which is exactly the "third avatar" bug that `custom-workflow-reauthor-pr` exists to fix, reintroduced by routine maintenance.
-
-Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything, so the rebase's effect can be verified:
+Never change commit authorship in this workflow. Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything, so the rebase's effect can be verified:
 
 ```bash
 PRE_HEAD=$(git rev-parse HEAD)
 git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/pre-rebase-identities.txt
 ```
 
-Force the committer identity to match the author so the rebase can't drift it to the bot's identity:
+Force the committer identity to match the author:
 
 ```bash
 export GIT_COMMITTER_NAME="Christopher Pitt"
@@ -125,7 +123,7 @@ If this diff is **not empty** — any commit's author, committer, or Co-Authored
 git reset --hard "$PRE_HEAD"
 ```
 
-A non-empty diff here almost always means this PR was already reauthored by `custom-workflow-reauthor-pr` (author/committer set to Chris, trailers filled in), and this routine rebase would have silently reverted that work back to the bot's identity — requiring the reauthor to be redone from scratch. Don't let that happen: log this PR as `"rebase skipped — would have overwritten prior reauthoring, rerun custom-workflow-reauthor-pr after this if the rebase is still needed"` and move to Step 3f without pushing. Do not attempt to fix it automatically — that's `custom-workflow-reauthor-pr` run deliberately, not something this maintenance pass should do as a side effect.
+Log this PR as `"rebase skipped — authorship guard tripped"` and move to Step 3f without pushing.
 
 If the diff is empty, continue to Step 3e.
 
@@ -159,14 +157,14 @@ PR Maintenance Complete
 {prUrl}
   Feedback   : {addressed N threads | no unresolved threads}
   Rebase     : {rebased cleanly | conflicts resolved | already up to date | skipped}
-  Authorship : {preserved | guard blocked push — rebase would have undone prior reauthoring}
+  Authorship : {preserved | guard tripped — push blocked}
   Push       : {pushed | failed | not needed}
 
 {prUrl2}
   ...
 ```
 
-If any PR's authorship guard blocked a push, call that out clearly in the summary — that PR was already reauthored and is now behind its base branch again; it needs Chris to run `custom-workflow-reauthor-pr` deliberately if he still wants it rebased, not a silent maintenance rebase that would wipe the reauthoring out.
+Call out any tripped authorship guards clearly in the summary.
 
 If any PRs were skipped because their repo isn't in the review project list, list them separately:
 
@@ -177,5 +175,4 @@ Skipped (not in review project list):
 
 ## Don'ts
 
-1. **DON'T** let a routine rebase silently change any commit's author, committer, or Co-Authored-By trailers — verify with the identity diff in Step 3d before every push
-2. **DON'T** treat an authorship-guard failure as "this PR needs reauthoring" — it means reauthoring was **already done** and this rebase would have destroyed it. Log it and move on; re-running the rebase is fine only after `custom-workflow-reauthor-pr` restores attribution, run deliberately by Chris, never as a side effect of maintenance
+1. **DON'T** rebase if it would change any commit's author, committer, or Co-Authored-By trailers — verify with the identity diff in Step 3d and skip the push if anything changed
