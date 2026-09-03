@@ -59,6 +59,7 @@ For each incomplete phase, in order:
    - Read the plan doc at [path] for full context on this phase
    - Implement ONLY this phase
    - Run the following pre-commit checks and fix any issues: [pre-commit commands]
+   - When running tests, scope them to this branch only — do NOT run the full test suite. Run `git diff main...HEAD --name-only` to identify changed source files, derive the corresponding test files, and pass only those to the test runner. CI handles full-suite regressions; local runs must be fast.
    - [If completion-via is 'progress':] Update the plan doc's Progress section: move this phase from To Do/In Progress to Completed
    - Commit all changes with a message starting with 'Phase N: ' (e.g. 'Phase 1: Add Question types and extend PlanState')
 
