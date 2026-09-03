@@ -214,15 +214,7 @@ Otherwise reply acknowledging the comment or answering the question, then resolv
 
 Before posting any reply, pass the draft body through the writing style guide to ensure it matches Chris's voice — not Claude's default tone.
 
-1. Write the draft reply body to a temp file:
-   ```bash
-   echo "{draft reply body}" > /tmp/friday-reply-draft.md
-   ```
-2. Invoke the writing style guide skill on that file (batch mode — no interactive prompt):
-   ```
-   Skill: custom-writing-style-guide /tmp/friday-reply-draft.md
-   ```
-3. Read the rewritten content back from `/tmp/friday-reply-draft.md` and use it as the final reply body.
+Invoke `custom-writing-style-guide` with the draft reply text passed directly as the argument (raw text mode — not a file path). Use the returned text as the final reply body.
 
 Then post the reply using the PR review comment API. The `databaseId` for the in-reply-to parameter is `thread.comments.nodes[0].databaseId`.
 
