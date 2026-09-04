@@ -155,6 +155,28 @@ If 5 rounds complete without a clean pass, stop and report the outstanding findi
 
 ## Step 5: Final Report
 
+### Bullet item format (used everywhere in this skill)
+
+Every bullet that describes a fix — in the final report, the fix PR body, the automated review comment, and the diff comment — must follow this exact format:
+
+```
+- **[area or file]:** [what the problem was] → [what was changed to fix it]
+```
+
+- The **area or file** is a short label: a filename, a function name, or a category (e.g. `docedit.py:85`, `locate_text()`, `Security`).
+- The **problem** is a plain-English sentence describing what was wrong or at risk (not what was done).
+- The **fix** is a plain-English sentence describing the concrete change made.
+
+Example:
+```
+- **locate_text() (docedit.py:120):** Empty needle caused an infinite loop with no escape condition → added an early `ValueError` guard at the top of the function
+- **insert_table_after() null guard:** `style_table_reqs(None, …)` could crash with `TypeError` after a post-fill re-fetch returned nothing → added a null check on `new_t` before calling it
+```
+
+Never describe only the fix. Never describe only the problem. Both parts are required.
+
+---
+
 ### Style the report text
 
 Before posting anything, run the report body through the writing style guide.
@@ -198,7 +220,7 @@ Report format:
 <details>
 <summary>What was fixed (N issues across N rounds)</summary>
 
-[Bullet list of every issue fixed across all rounds, grouped by phase and round.]
+[Bullet list using the "Bullet item format" defined above — every item must include both the problem and the fix. Group by phase and round.]
 
 </details>
 ```
@@ -253,7 +275,7 @@ Compose the PR body:
 This PR contains automated review fixes for #<pr-number> ([PR title]).
 
 **What it fixes:**
-[Bullet list of fixes from the Step 5 "What was fixed" section — one line per fix.]
+[Bullet list using the "Bullet item format" from Step 5 — every item must state the problem AND the fix. Copy from the Step 5 "What was fixed" list.]
 
 **To merge:** merge this PR into `<headRefName>` before landing PR #<pr-number>.
 ```
@@ -279,7 +301,7 @@ Friday has finished reviewing this PR and opened a fix PR with the suggested cha
 **Fix PR:** <fix-pr-url>
 
 **What it fixes:**
-[Bullet list from Step 5 "What was fixed" — one line per fix.]
+[Bullet list using the "Bullet item format" from Step 5 — every item must state the problem AND the fix. Copy from the Step 5 "What was fixed" list.]
 
 Merge the fix PR into `<headRefName>` before landing this one.
 EOF
@@ -326,7 +348,7 @@ gh pr comment <number> --body "$(cat <<'EOF'
 <details>
 <summary>What these fix (N issues)</summary>
 
-[Bullet list from Step 5 "What was fixed" — styled.]
+[Bullet list using the "Bullet item format" from Step 5 — every item must state the problem AND the fix. Copy from the Step 5 "What was fixed" list.]
 
 </details>
 EOF
