@@ -22,25 +22,36 @@ Subtract resolved source_ids from started source_ids. The remainder is the in-fl
 ## Step 4: For each in-flight PR, gather state
 
 For each in-flight PR URL:
-- Run `gh pr view <pr-url> --json state,title,number,headRepositoryOwner,headRepository,mergedAt,closedAt` to get current PR state (open / merged / closed).
+- Run `gh pr view <pr-url> --json state,title,number,headRepositoryOwner,headRepository,mergedAt,closedAt,reviews,commits` to get current PR state (open / merged / closed).
 - Extract `repo` as `<headRepositoryOwner.login>/<headRepository.name>` from the response.
 - Extract `number` from the response (or parse it from the URL as fallback).
 - Check worktree: run `ls /tmp/review-<number>` — note whether it exists (✓) or not (—).
 - Check branch: run `git -C /home/friday/Code/friday.assertchris.dev branch --list "review/<number>-*"` — note whether any match (✓) or not (—).
+- **Feedback addressed check** (open PRs only): From the `reviews` array, find the most recent review submitted by the `friday` account (author.login == "friday"). From the `commits` array, find the most recent commit (`committedDate`). If there is at least one commit whose `committedDate` is newer than the `submittedAt` of Friday's last review, mark this PR as `needs_approval = true`.
 
 ## Step 5: Render summary
 
-Print a markdown table with columns: `PR`, `State`, `Worktree`, `Branch`, `Started`.
+Print a markdown table with columns: `PR`, `State`, `Worktree`, `Branch`, `Started`, `Action Needed`.
 
 Example:
 ```
-| PR | State | Worktree | Branch | Started |
-|---|---|---|---|---|
-| [fix-auth #42](https://...) | merged | /tmp/review-42 ✓ | review/42-fix-auth ✓ | 2026-08-20 |
-| [add-search #51](https://...) | open | — | — | 2026-08-22 |
+| PR | State | Worktree | Branch | Started | Action Needed |
+|---|---|---|---|---|---|
+| [fix-auth #42](https://...) | merged | /tmp/review-42 ✓ | review/42-fix-auth ✓ | 2026-08-20 | — |
+| [add-search #51](https://...) | open | — | — | 2026-08-22 | — |
+| [update-nav #55](https://...) | open | — | — | 2026-08-23 | ⚠️ Approve |
 ```
 
 Use the PR title and number from the `gh pr view` output. Format the `Started` date as `YYYY-MM-DD` from `occurred_at`.
+
+For any PR where `needs_approval = true`, set `Action Needed` to `⚠️ Approve` in the table. After the table, print a dedicated callout section listing each such PR:
+
+```
+### PRs ready for your approval
+
+The following PRs had feedback addressed since your last review — go approve them manually:
+- [update-nav #55](<url>)
+```
 
 ## Step 6: Offer cleanup for completed PRs
 
