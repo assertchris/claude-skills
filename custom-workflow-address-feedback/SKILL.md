@@ -239,18 +239,35 @@ gh api graphql -f query='
 ' -F threadId="{thread.id}"
 ```
 
-## Step 11 — Record a completion event
+## Step 11 — Re-request review from addressed reviewers
+
+Only proceed with re-requesting if there are **zero** remaining unresolved threads on the PR. If any unresolved threads remain (e.g. because some were skipped), set `rerequestedReviewers` to `[]` and skip the rest of this step — do not re-request while feedback is still open.
+
+Collect the unique GitHub logins of every reviewer who left a comment in the threads you addressed (both code-fix and discussion-only threads). Exclude the PR author and the `github-actions` bot.
+
+For each unique reviewer login, re-request their review:
+
+```bash
+gh api -X POST repos/{owner}/{repo}/pulls/{prNumber}/requested_reviewers \
+  --field 'reviewers[]={reviewerLogin}'
+```
+
+If the request fails for a reviewer (e.g. they are no longer a collaborator), log the failure but continue with the remaining reviewers. Do not stop the skill.
+
+After sending re-requests, note which logins were successfully re-requested as `rerequestedReviewers`.
+
+## Step 13 — Record a completion event
 
 Call `friday_event_create` with:
 - `type`: `"pr.feedback.addressed"`
 - `user`: `"chris"`
 - `source_id`: `{prUrl}`
-- `payload`: `{ "code_fixes": {code_fixes}, "discussion_only": {discussion_only}, "commits_pushed": {commits_pushed}, "skipped": {skipped} }`
+- `payload`: `{ "code_fixes": {code_fixes}, "discussion_only": {discussion_only}, "commits_pushed": {commits_pushed}, "skipped": {skipped}, "rerequested_reviewers": {rerequestedReviewers} }`
 - `summary`: `"Addressed {code_fixes + discussion_only} thread(s) on {prUrl}"`
 
 If this call fails, log the failure but continue — it is non-fatal.
 
-## Step 12 — Print summary
+## Step 14 — Print summary
 
 Report the results:
 
@@ -260,6 +277,7 @@ Address feedback complete for {prUrl}
   Code fixes committed and pushed : {commits_pushed}
   Discussion threads resolved     : {discussion_only}
   Threads skipped                 : {skipped}
+  Review re-requested from        : {rerequestedReviewers joined by ", " or "none"}
 ```
 
 If `skipped_list` is non-empty, list each skipped thread with a short reason:
