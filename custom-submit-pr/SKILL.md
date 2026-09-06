@@ -130,9 +130,25 @@ EOF
 
 If `BASE_BRANCH` is set, append `--base <BASE_BRANCH>` to whichever form above applies.
 
-### Step 9: Report
+### Step 9: Apply "do not merge" label
 
-Output the PR URL so Chris can see it. If it was created as a draft, say so explicitly. If a QA checklist was included, mention it briefly.
+Immediately after the PR is created, apply the `do not merge` label:
+
+```bash
+gh pr edit <pr-number> --add-label "do not merge" --repo <nameWithOwner>
+```
+
+Extract the PR number from the URL returned in Step 8. If the label doesn't exist in the repo yet, create it first:
+
+```bash
+gh label create "do not merge" --color "B60205" --description "Not ready to land" --repo <nameWithOwner>
+```
+
+Then retry adding it. This label signals the PR is intentionally blocked from merging until Chris removes it.
+
+### Step 10: Report
+
+Output the PR URL so Chris can see it. Mention that the "do not merge" label has been applied. If it was created as a draft, say so explicitly. If a QA checklist was included, mention it briefly.
 
 ## Don'ts
 
@@ -152,4 +168,5 @@ Output the PR URL so Chris can see it. If it was created as a draft, say so expl
 - PR is assigned to `assertchris`
 - PR has `assertchris` as a reviewer
 - PR is a draft if and only if Chris asked for a draft
+- "do not merge" label is applied to every PR without exception
 - PR URL is displayed
