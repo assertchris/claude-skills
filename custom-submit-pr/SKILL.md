@@ -81,6 +81,8 @@ Look for files that suggest UI or user-facing changes. Indicators include:
 
 **If no UI-related files are found**, set `QA_CHECKLIST` to empty and skip this skill entirely.
 
+**CRITICAL — collapsed sections:** The QA checklist skill outputs each section wrapped in `<details><summary>…</summary>…</details>`. When embedding `QA_CHECKLIST` in the PR body, preserve this structure exactly as-is. **Do NOT flatten, unwrap, or reformat the checklist.** Every section must remain collapsed in the final PR body. If for any reason the returned checklist does not have `<details>` blocks, wrap each `##` section yourself before inserting it.
+
 ### Step 7: Determine PR Title
 
 Derive a short PR title (under 70 characters) from the feature doc heading or the summary. Use imperative mood (e.g., "Add tutorial system foundation", not "Added" or "Adds"). Apply the writing style guide voice to the title too — keep it punchy and direct.
