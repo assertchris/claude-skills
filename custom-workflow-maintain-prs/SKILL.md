@@ -66,13 +66,44 @@ git checkout {headRefName}
 git reset --hard origin/{headRefName}
 ```
 
-### 3b — Address unresolved review feedback
+### 3b — Check CI status and blocking labels
+
+**⚠️ IMPORTANT: This check determines whether the PR is silently unmergeable and must alert Chris.**
+
+Check the PR's current CI status:
+
+```bash
+gh pr checks {number} --repo {nameWithOwner} --json name,state,conclusion 2>&1
+```
+
+Determine the overall CI result:
+- If all checks pass (all `conclusion == "success"` or `state == "SUCCESS"`) → `CI_STATUS = "green"`
+- If any check is still pending/in progress → `CI_STATUS = "pending"`
+- If any check has failed → `CI_STATUS = "failing"`
+- If no checks exist → `CI_STATUS = "none"`
+
+Also check for blocking labels:
+
+```bash
+gh pr view {number} --repo {nameWithOwner} --json labels --jq '.labels[].name'
+```
+
+A label is considered **blocking** (intentionally preventing merge) if it matches any of these (case-insensitive): `do not merge`, `do-not-merge`, `dnm`, `wip`, `hold`, `blocked`, `on hold`, `not ready`.
+
+- If any blocking label is present → `HAS_BLOCKING_LABEL = true`
+- Otherwise → `HAS_BLOCKING_LABEL = false`
+
+**Flag logic:**
+- If `CI_STATUS == "failing"` AND `HAS_BLOCKING_LABEL == false` → mark this PR as `NEEDS_ATTENTION = true` (CI is broken and there's no label explaining why it shouldn't merge — this PR is unexpectedly unmergeable)
+- All other combinations → `NEEDS_ATTENTION = false`
+
+### 3c — Address unresolved review feedback
 
 Invoke the `custom-workflow-address-feedback` skill now. It will find the PR URL, fetch all unresolved review threads, and address them one by one.
 
 After the skill completes, note the result for this PR.
 
-### 3c — Check if the base branch is outdated
+### 3d — Check if the base branch is outdated
 
 Fetch the base branch and check whether the PR branch has been rebased on top of it:
 
@@ -85,20 +116,22 @@ If the command exits **0** (the base is already an ancestor of HEAD), the branch
 
 If the command exits **1** (the base has moved ahead of the PR branch), the branch is outdated. Continue to Step 3d.
 
-### 3d — Attempt rebase, without touching authorship
+### 3e — Attempt rebase, without touching authorship
 
-Never change commit authorship in this workflow. Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything, so the rebase's effect can be verified:
+**The authorship guard exists for one reason:** sometimes commits on a branch have been deliberately reauthored — e.g. the committer was changed from `friday <friday@assertchris.dev>` to `Christopher Pitt <cgpitt@gmail.com>` — and a rebase must never silently erase that intentional identity change. The guard detects this by comparing identities before and after the rebase. If the rebase changed any identity that was *already non-friday* before the rebase, the push is blocked.
+
+Critically: **do NOT set `GIT_COMMITTER_NAME` or `GIT_COMMITTER_EMAIL` env vars.** Let git use whatever identity is configured. If the pre-rebase commits are all `friday`, the post-rebase commits will also be all `friday`, and the diff will be empty. If a commit was deliberately reauthored to something else before this workflow ran, a plain rebase would reset it back to `friday` — that diff will be non-empty, and the guard correctly blocks the push.
+
+Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything:
 
 ```bash
 PRE_HEAD=$(git rev-parse HEAD)
 git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/pre-rebase-identities.txt
 ```
 
-Force the committer identity to match the author:
+Rebase without overriding any identity env vars:
 
 ```bash
-export GIT_COMMITTER_NAME="Christopher Pitt"
-export GIT_COMMITTER_EMAIL="cgpitt@gmail.com"
 git rebase origin/{baseRefName}
 ```
 
@@ -117,7 +150,7 @@ git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonl
 diff /tmp/pre-rebase-identities.txt /tmp/post-rebase-identities.txt
 ```
 
-If this diff is **not empty** — any commit's author, committer, or Co-Authored-By trailers changed — the rebase must not be pushed:
+If this diff is **not empty** — any commit's author, committer, or Co-Authored-By trailers changed — the rebase silently erased a deliberate identity and must not be pushed:
 
 ```bash
 git reset --hard "$PRE_HEAD"
@@ -127,7 +160,7 @@ Log this PR as `"rebase skipped — authorship guard tripped"` and move to Step 
 
 If the diff is empty, continue to Step 3e.
 
-### 3e — Push the updated branch
+### 3f — Push the updated branch
 
 After a successful rebase that passed the authorship guard above (whether clean or after conflict resolution), force-push:
 
@@ -137,10 +170,13 @@ git push --force-with-lease origin {headRefName}
 
 If the push fails, log `"push failed"` for this PR and move on — do not abort the rest of the PRs.
 
-### 3f — Record result
+### 3g — Record result
 
 Append to `prResults`:
 - PR URL
+- CI status (`green` / `pending` / `failing` / `none`)
+- Whether a blocking label is present (and which labels)
+- Whether this PR needs attention (`NEEDS_ATTENTION`)
 - Whether feedback was addressed (and how many threads)
 - Whether a rebase was performed
 - Whether conflicts were resolved
@@ -155,6 +191,8 @@ After all PRs have been processed, print a summary table:
 PR Maintenance Complete
 
 {prUrl}
+  CI         : {green | pending | failing | none}
+  Labels     : {blocking: do-not-merge | none}
   Feedback   : {addressed N threads | no unresolved threads}
   Rebase     : {rebased cleanly | conflicts resolved | already up to date | skipped}
   Authorship : {preserved | guard tripped — push blocked}
@@ -162,6 +200,17 @@ PR Maintenance Complete
 
 {prUrl2}
   ...
+```
+
+**⚠️ NEEDS ATTENTION — print this section prominently if any PRs have `NEEDS_ATTENTION = true`:**
+
+```
+⚠️  The following PRs have failing CI and no blocking label — they are currently unmergeable:
+
+  - {prUrl}  [{failingCheckNames}]
+  - {prUrl2} [{failingCheckNames}]
+
+These need your attention before they can merge.
 ```
 
 Call out any tripped authorship guards clearly in the summary.
@@ -175,4 +224,6 @@ Skipped (not in review project list):
 
 ## Don'ts
 
-1. **DON'T** rebase if it would change any commit's author, committer, or Co-Authored-By trailers — verify with the identity diff in Step 3d and skip the push if anything changed
+1. **DON'T** set `GIT_COMMITTER_NAME` or `GIT_COMMITTER_EMAIL` env vars during the rebase — doing so guarantees the identity diff will be non-empty for any non-friday commit and defeats the guard entirely
+2. **DON'T** push after a rebase if the identity diff is non-empty — that means the rebase silently erased a deliberate identity change; reset to `PRE_HEAD` and skip
+3. **DO** understand why the guard exists: if someone deliberately reauthored a commit to `Christopher Pitt <cgpitt@gmail.com>`, a plain rebase would reset it back to `friday <friday@assertchris.dev>` — the guard catches that and blocks the push
