@@ -94,19 +94,24 @@ Parse the feature doc and extract ONLY user-facing things to test. Look at these
 
 ### Step 5: Generate QA Checklist
 
-Create a checklist with this structure:
+Create a checklist with this structure. **CRITICAL: every section MUST be wrapped in a `<details><summary>…</summary>…</details>` collapsed element. No section content should appear outside a `<details>` block. The only content outside `<details>` blocks is the title line and the branch line.**
 
 ```markdown
 # QA Checklist: [Feature Name]
 
 Branch: `[branch-name]`
 
-## Prerequisites
+<details>
+<summary>Prerequisites</summary>
+
 - [ ] Branch deployed to QA environment
 - [ ] [Any specific setup needed, e.g., "Feature flag enabled for MX tenant"]
 - [ ] [Any test accounts or data needed]
 
-## Happy Path Testing
+</details>
+
+<details>
+<summary>Happy Path Testing</summary>
 
 ### [Primary Flow Name]
 - [ ] [Step 1 - what to do and what should happen]
@@ -117,14 +122,20 @@ Branch: `[branch-name]`
 - [ ] [Step 1]
 - [ ] [Step 2]
 
-## UI Elements
+</details>
+
+<details>
+<summary>UI Elements</summary>
 
 ### [Section/Component Name]
 - [ ] [Element] displays correctly (text, styling, position)
 - [ ] [Element] responds to interaction (hover, click, focus)
 - [ ] [Element] shows correct state (enabled/disabled/loading)
 
-## Edge Cases & Validation
+</details>
+
+<details>
+<summary>Edge Cases & Validation</summary>
 
 ### [Form/Feature Name]
 - [ ] Empty/missing required fields show validation errors
@@ -132,34 +143,57 @@ Branch: `[branch-name]`
 - [ ] Error messages are clear and helpful
 - [ ] [Specific edge case to test]
 
-## Error Handling
+</details>
+
+<details>
+<summary>Error Handling</summary>
+
 - [ ] [What happens when X fails - network error, invalid data, etc.]
 - [ ] User sees appropriate error message
 - [ ] User can recover from error state
 
-## Localization (if applicable)
+</details>
+
+<details>
+<summary>Localization (if applicable)</summary>
+
 - [ ] All text displays in correct language
 - [ ] Dates/numbers formatted correctly for locale
 - [ ] No untranslated keys or placeholder text visible
 
-## Responsive / Cross-browser
+</details>
+
+<details>
+<summary>Responsive / Cross-browser</summary>
+
 - [ ] Desktop (1920x1080): [Key things to check]
 - [ ] Tablet (768px): [Key things to check]
 - [ ] Mobile (375px): [Key things to check]
 - [ ] Test in [Chrome, Firefox, Safari if relevant]
 
-## Integration Testing
+</details>
+
+<details>
+<summary>Integration Testing</summary>
+
 - [ ] [How this feature works with existing feature A]
 - [ ] [How this feature works with existing feature B]
 - [ ] [Any side effects to verify in other parts of the app]
 
-## Regression Testing
+</details>
+
+<details>
+<summary>Regression Testing</summary>
+
 - [ ] [Existing functionality that shouldn't be affected]
 - [ ] [Other tenants/configurations still work correctly]
+
+</details>
 ```
 
 ### Step 6: Format and Present
 
+- **EVERY section MUST be inside a `<details><summary>…</summary>…</details>` collapsed block. This is non-negotiable. No exceptions.**
 - Display the checklist as raw markdown with all checkbox syntax visible `- [ ]`
 - Keep items actionable and specific (not vague like "test the button")
 - Group related items together
