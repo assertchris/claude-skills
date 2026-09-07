@@ -55,11 +55,15 @@ Invoke the `custom-pr-summary` skill to generate the PR description. If `DOC_PAT
 
 Take the generated summary — only the "Summary" section content, no "Key Review Areas" or "Files Changed" sections.
 
+**This is Step 4 of 10. Do NOT stop here. Continue immediately to Step 5.**
+
 ### Step 5: Apply Writing Style Guide
 
 Invoke the `custom-writing-style-guide` skill, passing the summary text from Step 4 directly as the argument (raw text mode — not a file path). The skill will return the rewritten text as output.
 
 Use the returned text as the PR body.
+
+**This is Step 5 of 10. Do NOT stop here. Continue immediately to Step 6.**
 
 ### Step 6: Assess for QA Checklist
 
