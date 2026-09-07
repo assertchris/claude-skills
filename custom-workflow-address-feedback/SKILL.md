@@ -245,7 +245,15 @@ Only proceed with re-requesting if there are **zero** remaining unresolved threa
 
 Collect the unique GitHub logins of every reviewer who left a comment in the threads you addressed (both code-fix and discussion-only threads). Exclude the PR author and the `github-actions` bot.
 
-For each unique reviewer login, re-request their review:
+Before re-requesting, fetch the current review states for the PR:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{prNumber}/reviews --jq '[.[] | {login: .user.login, state: .state}]'
+```
+
+From the collected logins, exclude any reviewer whose most recent review state is `"APPROVED"`. They have already accepted the PR — re-requesting would unnecessarily reset their approval. Only re-request reviewers whose most recent state is `"CHANGES_REQUESTED"`, `"COMMENTED"`, `"DISMISSED"`, or who have no review state at all.
+
+For each remaining reviewer login, re-request their review:
 
 ```bash
 gh api -X POST repos/{owner}/{repo}/pulls/{prNumber}/requested_reviewers \
