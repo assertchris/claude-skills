@@ -139,11 +139,21 @@ The audit is complete only when:
 
 ## Step 5: Write Findings to a Research Note
 
-Once the audit is fully validated, create a Friday research note using `friday_notes_create` with:
+Once the audit is fully validated, pass the full report body through the writing style guide via a sub-agent before writing it to a note.
+
+Spawn a sub-agent with model `haiku` and the following prompt:
+
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the prose sections of the following markdown audit report to match the style guide. Leave all tables, code blocks, headings, and evidence lines exactly as-is — only rewrite prose paragraphs. Return only the rewritten markdown — no commentary, no explanation.
+>
+> {full audit report markdown}
+
+Use the sub-agent's returned text as the note body.
+
+Then create a Friday research note using `friday_notes_create` with:
 
 - **user**: chris
 - **title**: `Code Audit — <project name> — <today's date>`
-- **body**: the full audit report in Markdown, structured as follows:
+- **body**: the styled audit report, structured as follows:
 
 ```
 # Code Audit — <project name> — <date>
