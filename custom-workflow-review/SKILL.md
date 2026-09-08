@@ -175,13 +175,34 @@ Example:
 
 Never describe only the fix. Never describe only the problem. Both parts are required.
 
+### Conciseness rule — no exceptions
+
+**Get to the point. You are not paid by the word. The more you write, the less people read.**
+
+When pointing out a problem:
+- State what is wrong in one sentence.
+- State the recommended fix in one sentence.
+- Stop. Do not pad, hedge, contextualise, or explain the broader implications unless they are non-obvious and genuinely load-bearing.
+
+Bad: "This is an interesting pattern but I noticed that in certain edge cases, particularly when the input is null, there could potentially be a TypeError thrown which might cause issues downstream in the application..."
+
+Good: "Null input causes a TypeError here. Add a null guard before the call."
+
+Every issue report must fit the shape: **[Problem]. [Fix].**
+
 ---
 
 ### Style the report text
 
-Before posting anything, run the report body through the writing style guide.
+Before posting anything, run the report body through the writing style guide via a sub-agent so the main session isn't blocked.
 
-Invoke `custom-writing-style-guide` with the report markdown passed directly as the argument (raw text mode — not a file path). Use the returned text as the report body for all subsequent comment and PR body steps.
+Spawn a sub-agent with model `haiku` and the following prompt:
+
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the following markdown to match the style guide exactly. Return only the rewritten text — no commentary, no explanation.
+>
+> {report markdown}
+
+Use the sub-agent's returned text as the report body for all subsequent comment and PR body steps.
 
 ### Post the report comment
 
@@ -326,7 +347,13 @@ git -C /tmp/review-<pr-number> diff origin/<headRefName>...review/<pr-number>-<s
 
 Style the prose sections of the comment body through the writing style guide before posting — the diff block itself is structural and must not be touched.
 
-Invoke `custom-writing-style-guide` with the prose portion (without the diff) passed directly as the argument (raw text mode). Use the returned text to compose the final body, wrapping the raw diff block.
+Spawn a sub-agent with model `haiku` and the following prompt:
+
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the following prose to match the style guide exactly. Return only the rewritten text — no commentary, no explanation.
+>
+> {prose portion without the diff}
+
+Use the sub-agent's returned text to compose the final body, wrapping the raw diff block.
 
 Post it as a comment on the original PR:
 
