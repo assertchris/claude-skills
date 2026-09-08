@@ -102,13 +102,19 @@ Increment `<iteration>` by 1 and continue.
 **If `<mode>` is `note`:**
 
 1. Read the final state of `<working_file>` in full.
-2. Call `mcp__friday__friday_notes_update` with:
+2. Pass the content through the writing style guide via a sub-agent before saving. Spawn a sub-agent with model `haiku` and the following prompt:
+
+   > Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the prose sections of the following markdown to match the style guide. Leave all tables, code blocks, headings, and checklist items exactly as-is — only rewrite prose paragraphs. Return only the rewritten markdown — no commentary, no explanation.
+   >
+   > {full contents of working_file}
+
+3. Call `mcp__friday__friday_notes_update` with:
    - `id`: `<note_id>`
    - `title`: `<note_title>` (unchanged)
-   - `body`: the complete, full contents of `<working_file>` — never a partial fragment
-3. Confirm the update succeeded (check the tool response for errors).
-4. Delete the scratch file: run `rm <working_file>` via Bash.
-5. Report: "Note #<note_id> has been refined over 25 iterations and updated. Scratch file cleaned up."
+   - `body`: the sub-agent's returned text — never a partial fragment
+4. Confirm the update succeeded (check the tool response for errors).
+5. Delete the scratch file: run `rm <working_file>` via Bash.
+6. Report: "Note #<note_id> has been refined over 25 iterations and updated. Scratch file cleaned up."
 
 **If `<mode>` is `plan`:**
 
