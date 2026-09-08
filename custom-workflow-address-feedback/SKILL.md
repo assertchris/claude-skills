@@ -212,9 +212,24 @@ Otherwise reply acknowledging the comment or answering the question, then resolv
 
 ### Reply format
 
-Before posting any reply, pass the draft body through the writing style guide to ensure it matches Chris's voice — not Claude's default tone.
+**Get to the point. You are not paid by the word. The more you write, the less people read.**
 
-Invoke `custom-writing-style-guide` with the draft reply text passed directly as the argument (raw text mode — not a file path). Use the returned text as the final reply body.
+Replies must be short and direct. The bulk of every reply must resemble one of these two shapes:
+
+- For a fix: "X was wrong. Fixed by doing Y (in commit `{sha}`)."
+- For pushback or a question: "X is wrong for these reasons. I recommend Y instead."
+
+Do not pad, hedge, thank the reviewer, or explain the broader context unless it is genuinely load-bearing and non-obvious. One or two sentences is the target. Three is the ceiling.
+
+Before posting any reply, pass the draft body through the writing style guide via a sub-agent so the main session isn't blocked.
+
+Spawn a sub-agent with model `haiku` and the following prompt:
+
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the following text to match the style guide exactly. Keep it short and direct — one to three sentences maximum. Return only the rewritten text — no commentary, no explanation.
+>
+> {draft reply text}
+
+Use the sub-agent's returned text as the final reply body.
 
 Then post the reply using the PR review comment API. The `databaseId` for the in-reply-to parameter is `thread.comments.nodes[0].databaseId`.
 
