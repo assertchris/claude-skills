@@ -59,9 +59,13 @@ Take the generated summary — only the "Summary" section content, no "Key Revie
 
 ### Step 5: Apply Writing Style Guide
 
-Invoke the `custom-writing-style-guide` skill, passing the summary text from Step 4 directly as the argument (raw text mode — not a file path). The skill will return the rewritten text as output.
+Spawn a sub-agent with model `haiku` and the following prompt:
 
-Use the returned text as the PR body.
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`. Then rewrite the following text to match the style guide exactly. Return only the rewritten text — no commentary, no explanation.
+>
+> {summary text from Step 4}
+
+Use the sub-agent's returned text as the PR body.
 
 **This is Step 5 of 10. Do NOT stop here. Continue immediately to Step 6.**
 
