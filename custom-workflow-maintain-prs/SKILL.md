@@ -94,7 +94,7 @@ A label is considered **blocking** (intentionally preventing merge) if it matche
 - Otherwise → `HAS_BLOCKING_LABEL = false`
 
 **Flag logic:**
-- If `CI_STATUS == "failing"` AND `HAS_BLOCKING_LABEL == false` → mark this PR as `NEEDS_ATTENTION = true` (CI is broken and there's no label explaining why it shouldn't merge — this PR is unexpectedly unmergeable)
+- If `CI_STATUS == "failing"` → mark this PR as `NEEDS_ATTENTION = true`, regardless of whether a blocking label is present. A blocking label may itself be causing CI to fail, but any other failing tests or checks must still be diagnosed and addressed. The label does not excuse broken CI.
 - All other combinations → `NEEDS_ATTENTION = false`
 
 ### 3c — Address unresolved review feedback
@@ -118,15 +118,17 @@ If the command exits **1** (the base has moved ahead of the PR branch), the bran
 
 ### 3e — Attempt rebase, without touching authorship
 
-**The authorship guard exists for one reason:** sometimes commits on a branch have been deliberately reauthored — e.g. the committer was changed from `friday <friday@assertchris.dev>` to `Christopher Pitt <cgpitt@gmail.com>` — and a rebase must never silently erase that intentional identity change. The guard detects this by comparing identities before and after the rebase. If the rebase changed any identity that was *already non-friday* before the rebase, the push is blocked.
+**The authorship guard exists for one reason:** sometimes commits on a branch have been deliberately reauthored — e.g. the committer was changed from `friday <friday@assertchris.dev>` to `Christopher Pitt <cgpitt@gmail.com>` — and a rebase must never silently erase that intentional identity change.
 
-Critically: **do NOT set `GIT_COMMITTER_NAME` or `GIT_COMMITTER_EMAIL` env vars.** Let git use whatever identity is configured. If the pre-rebase commits are all `friday`, the post-rebase commits will also be all `friday`, and the diff will be empty. If a commit was deliberately reauthored to something else before this workflow ran, a plain rebase would reset it back to `friday` — that diff will be non-empty, and the guard correctly blocks the push.
+**The guard only protects Chris's identity.** It trips if and only if a commit whose pre-rebase author or committer was `Christopher Pitt`, `assertchris`, or `cgpitt@gmail.com` ends up with a different identity after the rebase. All other identity changes — bot authors, GitHub Actions, signing bots, `friday`, or any other non-Chris identity — are irrelevant and must be ignored.
 
-Record the author, committer, and any Co-Authored-By trailers for every commit in range before doing anything:
+Critically: **do NOT set `GIT_COMMITTER_NAME` or `GIT_COMMITTER_EMAIL` env vars.** Let git use whatever identity is configured.
+
+Record the author and committer for every commit in range before doing anything:
 
 ```bash
 PRE_HEAD=$(git rev-parse HEAD)
-git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/pre-rebase-identities.txt
+git log --format="%H | %an <%ae> | %cn <%ce>" origin/{baseRefName}..HEAD > /tmp/pre-rebase-identities.txt
 ```
 
 Rebase without overriding any identity env vars:
@@ -143,14 +145,13 @@ git rebase --abort
 
 Then invoke the `custom-conflict-resolution` skill. That skill will re-attempt the rebase, resolve conflicts file by file, and complete the rebase. After it completes, continue below.
 
-**After any rebase that completes (clean or via conflict resolution), verify authorship was preserved before pushing:**
+**After any rebase that completes (clean or via conflict resolution), verify Chris's authorship was preserved:**
 
 ```bash
-git log --format="%an <%ae> | %cn <%ce> | %(trailers:key=Co-Authored-By,valueonly)" origin/{baseRefName}..HEAD > /tmp/post-rebase-identities.txt
-diff /tmp/pre-rebase-identities.txt /tmp/post-rebase-identities.txt
+git log --format="%H | %an <%ae> | %cn <%ce>" origin/{baseRefName}..HEAD > /tmp/post-rebase-identities.txt
 ```
 
-If this diff is **not empty** — any commit's author, committer, or Co-Authored-By trailers changed — the rebase silently erased a deliberate identity and must not be pushed:
+Compare the two files. For each commit, check whether the pre-rebase author or committer matched Chris (`Christopher Pitt`, `assertchris`, or `cgpitt@gmail.com`). If any such commit now shows a different author or committer post-rebase, the guard trips:
 
 ```bash
 git reset --hard "$PRE_HEAD"
@@ -158,7 +159,7 @@ git reset --hard "$PRE_HEAD"
 
 Log this PR as `"rebase skipped — authorship guard tripped"` and move to Step 3f without pushing.
 
-If the diff is empty, continue to Step 3e.
+If no Chris-authored commits changed identity, continue to Step 3e. Changes to bot or friday identities are expected and fine.
 
 ### 3f — Push the updated branch
 
@@ -172,8 +173,15 @@ If the push fails, log `"push failed"` for this PR and move on — do not abort 
 
 ### 3g — Record result
 
+Fetch the PR title if not already known:
+
+```bash
+gh pr view {number} --repo {nameWithOwner} --json title --jq '.title'
+```
+
 Append to `prResults`:
 - PR URL
+- PR title
 - CI status (`green` / `pending` / `failing` / `none`)
 - Whether a blocking label is present (and which labels)
 - Whether this PR needs attention (`NEEDS_ATTENTION`)
@@ -190,7 +198,7 @@ After all PRs have been processed, print a summary table:
 ```
 PR Maintenance Complete
 
-{prUrl}
+{prTitle} — {prUrl}
   CI         : {green | pending | failing | none}
   Labels     : {blocking: do-not-merge | none}
   Feedback   : {addressed N threads | no unresolved threads}
@@ -198,17 +206,17 @@ PR Maintenance Complete
   Authorship : {preserved | guard tripped — push blocked}
   Push       : {pushed | failed | not needed}
 
-{prUrl2}
+{prTitle2} — {prUrl2}
   ...
 ```
 
 **⚠️ NEEDS ATTENTION — print this section prominently if any PRs have `NEEDS_ATTENTION = true`:**
 
 ```
-⚠️  The following PRs have failing CI and no blocking label — they are currently unmergeable:
+⚠️  The following PRs have failing CI — they are currently unmergeable:
 
-  - {prUrl}  [{failingCheckNames}]
-  - {prUrl2} [{failingCheckNames}]
+  - {prTitle}  [{failingCheckNames}]  {prUrl}
+  - {prTitle2} [{failingCheckNames}]  {prUrl2}
 
 These need your attention before they can merge.
 ```
