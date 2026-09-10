@@ -157,6 +157,7 @@ Initialise counters:
 - `commits_pushed = 0`
 - `skipped = 0`
 - `skipped_list = []`
+- `deferred_list = []`
 
 If there are no matching threads, skip to Step 11.
 
@@ -166,11 +167,38 @@ For each thread in the filtered list, work through it completely before moving t
 
 ### Classify the thread
 
-Read all comment bodies in `thread.comments.nodes`. Also read the source file at `{repoRoot}/{thread.path}` around `thread.line` for context. Determine whether the thread requires a code change or is discussion-only.
+Read all comment bodies in `thread.comments.nodes`. Also read the source file at `{repoRoot}/{thread.path}` around `thread.line` for context. Determine which of three categories the thread falls into: **revert/drastic change**, **code change**, or **discussion-only**.
 
-A thread requires a code change when a reviewer explicitly asks for a modification to source code — a wording fix, a logic change, an added guard, a renamed variable, etc. A thread is discussion-only when it is a question, a clarification, praise (LGTM), or a comment that has already been addressed by other means.
+A thread is a **revert or drastic change** when the reviewer asks to:
+- Remove or undo something Friday wrote (revert, delete, roll back, take it out)
+- Completely rewrite or redesign a section (start over, do it differently, wrong approach)
+- Replace an implementation with a fundamentally different one
+
+Do not conflate this with minor fixes (rename, add a guard, fix a typo) — those are ordinary code changes.
+
+A thread requires a **code change** when a reviewer explicitly asks for a targeted modification to source code — a wording fix, a logic change, an added guard, a renamed variable, etc.
+
+A thread is **discussion-only** when it is a question, a clarification, praise (LGTM), or a comment that has already been addressed by other means.
+
+### Revert or drastic change requested
+
+Do not act on this thread. Add an entry to `deferred_list` with:
+- The thread ID
+- The file path and line
+- A one-sentence summary of what the reviewer is asking for
+
+Skip to the next thread. These will be presented to Chris before any action is taken on them.
 
 ### Code change required
+
+**Before making any edit, assess whether you agree with the feedback.**
+
+This code has already been through Chris's full review cycle: he reviewed the research, the plan, the implementation, and every line in the PR. A reviewer (or automated bot) may raise valid points — but they may also be wrong. Do not treat reviewer feedback as ground truth.
+
+Ask yourself: is the reviewer's suggestion actually correct? Does it improve the code, or does it introduce a different problem, miss context, or conflict with the design intent?
+
+- If you **agree** the feedback is correct: proceed with the fix as normal.
+- If you **disagree** or are **uncertain**: add the thread to `deferred_list` with your assessment (what the reviewer said, why you think they may be wrong, and what you'd recommend instead). Do not implement the change. Present it to Chris at Step 10.5.
 
 1. Edit the relevant files to address the reviewer's request.
 2. Stage only the files you changed for this thread:
@@ -219,6 +247,8 @@ Replies must be short and direct. The bulk of every reply must resemble one of t
 - For a fix: "X was wrong. Fixed by doing Y (in commit `{sha}`)."
 - For pushback or a question: "X is wrong for these reasons. I recommend Y instead."
 
+**Confidence rule:** Friday is the author of this code and stands behind it. When disagreeing with a reviewer, be direct and give a reason — don't hedge or apologise. If genuinely uncertain whether the reviewer has a point, say so plainly and ask Chris before replying. Never capitulate to a reviewer just to avoid conflict.
+
 Do not pad, hedge, thank the reviewer, or explain the broader context unless it is genuinely load-bearing and non-obvious. One or two sentences is the target. Three is the ceiling.
 
 Before posting any reply, pass the draft body through the writing style guide via a sub-agent so the main session isn't blocked.
@@ -253,6 +283,25 @@ gh api graphql -f query='
   }
 ' -F threadId="{thread.id}"
 ```
+
+## Step 10.5 — Present deferred threads to Chris
+
+If `deferred_list` is non-empty, stop and present the list before doing anything else:
+
+```
+The following threads were deferred — either because they ask for a revert/drastic change,
+or because I disagree with the reviewer's suggestion. I haven't touched them.
+
+{for each entry in deferred_list}
+  [{index}] {file path}:{line}
+      Reviewer: {one-sentence summary of what the reviewer is asking}
+      My take:  {one-sentence assessment — why I disagree or what I'd recommend instead, or "drastic change — your call"}
+{end}
+
+How would you like to handle each one?
+```
+
+Wait for Chris's instructions on each deferred thread. Do not proceed to Step 11 until he has responded. If he says to skip one, add it to `skipped_list`. If he says to address one, re-classify it as a code change and handle it immediately (make the edit, run checks, commit, push, reply, resolve) before moving to his next instruction.
 
 ## Step 11 — Re-request review from addressed reviewers
 
@@ -302,6 +351,8 @@ Address feedback complete for {prUrl}
   Threads skipped                 : {skipped}
   Review re-requested from        : {rerequestedReviewers joined by ", " or "none"}
 ```
+
+If any deferred threads were handled during Step 10.5, include them in the totals above.
 
 If `skipped_list` is non-empty, list each skipped thread with a short reason:
 
