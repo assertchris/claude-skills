@@ -76,16 +76,34 @@ For each phase, launch a sub-agent (using the Agent tool) with the following pro
 
 Collect all sub-agent findings before proceeding.
 
-## Step 5: Write the plan
+## Step 5: Draft the plan
 
 Using the sub-agent findings, produce a detailed phased implementation plan. Every phase must have concrete steps. Tests go in the same phase as the code they target.
 
+Store the full draft as `planDraft` — do not write it to the doc yet.
+
+## Step 5.5: Apply writing style guide
+
+Spawn a sub-agent with `model: haiku` and `run_in_background: false` with the following prompt:
+
+> Read `~/.claude/skills/custom-writing-style-guide/style-guide.md`.
+> Then rewrite the following plan doc to match the style guide exactly.
+> Preserve all markdown structure (headings, code blocks, lists, tables) — only rewrite prose sections.
+> Do not change any code, file paths, shell commands, or technical specifics.
+> Return only the rewritten plan — no commentary, no explanation.
+>
+> {planDraft}
+
+Store the sub-agent's returned text as `planFinal`.
+
+## Step 6: Write the plan
+
 Writing the plan to the doc is NOT optional — it is the final required step. Do not stop until it is done:
 
-1. If the plan doc already exists and has frontmatter (`---` … `---`): preserve the frontmatter block and replace the content below it with the full plan.
-2. Otherwise: write the full plan to the doc path resolved in Step 2.
+1. If the plan doc already exists and has frontmatter (`---` … `---`): preserve the frontmatter block and replace the content below it with `planFinal`.
+2. Otherwise: write `planFinal` to the doc path resolved in Step 2.
 3. Do NOT commit — leave the file uncommitted for review.
 
-## Step 6: Post-write hook (optional)
+## Step 7: Post-write hook (optional)
 
 Check `$ARGUMENTS` for a `post-write:` key. If present, run the shell command it contains. Warn the user if it fails but do not abort.
