@@ -39,4 +39,17 @@ Once the PR URL is returned, watch it for CI completion using a bash poll loop â
     sleep 30
   done
 
-When all checks pass, or if there are no checks after 3 attempts, report the PR URL and that it is ready to merge.
+When all checks pass, or if there are no checks after 3 attempts, store the QA checklist in topic meta:
+
+1. Extract the topic ID from the current session scope â€” the numeric portion of `user::chris::<N>`. If the scope is not in this format (e.g. general session), skip meta storage and proceed to reporting.
+2. Run the `custom-qa-checklist` skill unconditionally to generate the checklist markdown.
+3. Run `git rev-parse HEAD` to capture the current commit SHA.
+4. Capture the absolute path of the repository (`git rev-parse --show-toplevel`).
+5. Call `friday_topic_set_meta` three times:
+   - `{ id: <topic_id>, key: "qa_checklist", value: "<checklist text, or empty string if generation failed or returned nothing>" }`
+   - `{ id: <topic_id>, key: "qa_checklist_commit", value: "<SHA>" }`
+   - `{ id: <topic_id>, key: "qa_checklist_repo", value: "<absolute repo path>" }`
+
+If checklist generation fails for any reason, store an empty string for `qa_checklist` (do not skip the step). Note the failure in the final response.
+
+After meta storage (or if skipped), report the PR URL and that it is ready to merge.

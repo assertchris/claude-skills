@@ -69,27 +69,9 @@ Use the sub-agent's returned text as the PR body.
 
 **This is Step 5 of 10. Do NOT stop here. Continue immediately to Step 6.**
 
-### Step 6: Assess for QA Checklist
+### Step 6: Skip QA Checklist
 
-Check whether the branch includes user-facing, externally testable changes by inspecting the diff against the base branch (or `main` if no base is set):
-
-```bash
-git diff --name-only main...HEAD
-```
-
-Look for files that suggest UI or user-facing changes. Indicators include:
-- Frontend files: `.vue`, `.tsx`, `.jsx`, `.ts` (in `resources/`, `src/`, `components/`, `pages/`, `views/`), `.html`, `.blade.php`, `.css`, `.scss`, `.svelte`
-- Route files that add new browser-accessible endpoints
-- Any file path containing `ui`, `frontend`, `web`, `views`, `pages`, `components`, or `templates`
-
-**If any such files are present**, invoke the `custom-qa-checklist` skill. It will return a checklist or indicate the change is backend-only.
-
-- If the skill returns a meaningful checklist (not a "backend-only, nothing to QA" response), store it as `QA_CHECKLIST`.
-- If the skill returns a backend-only notice or no checklist, set `QA_CHECKLIST` to empty and skip.
-
-**If no UI-related files are found**, set `QA_CHECKLIST` to empty and skip this skill entirely.
-
-**CRITICAL — collapsed sections:** The QA checklist skill outputs each section wrapped in `<details><summary>…</summary>…</details>`. When embedding `QA_CHECKLIST` in the PR body, preserve this structure exactly as-is. **Do NOT flatten, unwrap, or reformat the checklist.** Every section must remain collapsed in the final PR body. If for any reason the returned checklist does not have `<details>` blocks, wrap each `##` section yourself before inserting it.
+The QA checklist is no longer generated at PR-creation time. It is generated unconditionally by `custom-workflow-pr` after CI passes and stored in topic meta via `friday_topic_set_meta`. Do not invoke `custom-qa-checklist` here. Set `QA_CHECKLIST` to empty and continue to Step 7.
 
 ### Step 7: Determine PR Title
 
@@ -106,11 +88,9 @@ Build the `gh pr create` command with these flags:
 
 Construct the PR body as follows:
 - Always include `## Summary` with the styled summary from Step 5.
-- If `QA_CHECKLIST` is non-empty, append it after the summary under a `## QA Checklist` heading.
+- Do NOT include a `## QA Checklist` section — the checklist is stored in topic meta after CI passes and posted to JIRA via fan-out.
 - Always end with the `🤖 Generated with [Claude Code]` attribution line.
 
-Without a QA checklist:
-
 ```bash
 gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
 ## Summary
@@ -121,22 +101,7 @@ EOF
 )"
 ```
 
-With a QA checklist:
-
-```bash
-gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<rewritten summary from Step 5>
-
-## QA Checklist
-<QA_CHECKLIST content from Step 6>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
-```
-
-If `BASE_BRANCH` is set, append `--base <BASE_BRANCH>` to whichever form above applies.
+If `BASE_BRANCH` is set, append `--base <BASE_BRANCH>`.
 
 ### Step 9: Apply "do not merge" label
 
@@ -160,7 +125,7 @@ Output the PR URL so Chris can see it. Mention that the "do not merge" label has
 
 ## Don'ts
 
-1. **DON'T** include checkboxes, test plans, or checklists in the PR body unless `QA_CHECKLIST` was generated in Step 6
+1. **DON'T** include a `## QA Checklist` section or any checklist content in the PR body — QA checklists are stored in topic meta and posted to JIRA via fan-out by `custom-workflow-pr`
 2. **DON'T** include "Files Changed" or "Key Review Areas" sections
 3. **DON'T** commit uncommitted changes — only push and create the PR
 4. **DON'T** assign or add as reviewer anyone other than `assertchris`
@@ -178,3 +143,4 @@ Output the PR URL so Chris can see it. Mention that the "do not merge" label has
 - PR is a draft if and only if Chris asked for a draft
 - "do not merge" label is applied to every PR without exception
 - PR URL is displayed
+- No QA checklist section in the PR body
