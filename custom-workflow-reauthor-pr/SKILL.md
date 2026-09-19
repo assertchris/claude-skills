@@ -1,13 +1,15 @@
 ---
 name: custom-workflow-reauthor-pr
 user-invocable: true
-description: Re-authors all commits on a GitHub PR branch from fridaytherobot to assertchris (Christopher Pitt) as both author AND committer, preserving commit messages and ensuring every commit carries a Claude Co-Authored-By byline (never second-guessing an existing one). Use when user asks to re-author a PR, claim a PR, take ownership of PR commits, or sign commits on a bot PR.
+description: Re-authors ALL non-Chris, non-Claude commits on a GitHub PR branch — every bot account (fridaytherobot, friday, pr-signing-bot, or any other bot, not just the ones named here) — to assertchris (Christopher Pitt) as both author AND committer, preserving commit messages and ensuring every commit carries a Claude Co-Authored-By byline (never second-guessing an existing one). The only two names Chris wants visible on the PR when this is done are his and Claude's. Use when user asks to re-author a PR, claim a PR, take ownership of PR commits, or sign commits on a bot PR.
 allowed-tools: Bash(git *, gh *)
 ---
 
 # Re-Author PR Commits
 
-This skill takes a GitHub PR URL, checks out the branch, and re-authors all bot-authored commits on it (author `fridaytherobot` or `friday`, depending on repo) to `assertchris` (Christopher Pitt <cgpitt@gmail.com>). This must rewrite **both** the author and the committer field — a plain `git commit --amend --author=` only changes the author, and `git rebase --exec` stamps the committer field with whatever `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL`/`user.name`/`user.email` happen to resolve to in the shell doing the rebase. If that resolves to the bot's identity (it has before), GitHub renders a third avatar on every commit — bot as committer, alongside Chris as author and Claude as co-author. Force the committer identity explicitly; don't rely on ambient git config being correct. Commit messages are otherwise preserved, EXCEPT that every rewritten commit must end up with a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer — add it if missing.
+**The only two names Chris wants to see on the PR when this is done are his (Christopher Pitt) and Claude's (via Co-Authored-By trailer). No third identity survives, ever — not `fridaytherobot`/`friday`, not `pr-signing-bot[bot]`, not any other bot or service account that shows up in the commit list. Check the actual list of distinct authors on the PR (Step 3) and treat every one of them that isn't Chris as needing rewriting — do not limit this to the specific bot names mentioned in this doc, they're examples, not an exhaustive list.**
+
+This skill takes a GitHub PR URL, checks out the branch, and re-authors every non-Chris commit on it (author `fridaytherobot`, `friday`, `pr-signing-bot[bot]`, or any other bot/service account, depending on repo) to `assertchris` (Christopher Pitt <cgpitt@gmail.com>). This must rewrite **both** the author and the committer field — a plain `git commit --amend --author=` only changes the author, and `git rebase --exec` stamps the committer field with whatever `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL`/`user.name`/`user.email` happen to resolve to in the shell doing the rebase. If that resolves to the bot's identity (it has before), GitHub renders a third avatar on every commit — bot as committer, alongside Chris as author and Claude as co-author. Force the committer identity explicitly; don't rely on ambient git config being correct. Commit messages are otherwise preserved, EXCEPT that every rewritten commit must end up with a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer — add it if missing.
 
 **Never "correct" an existing model name in a trailer.** Claude's own knowledge of which model names are real is frequently stale (new models ship after any given session's cutoff) — a version number that looks wrong or unfamiliar may simply be a real model released after the assistant's training. Only change an existing trailer's model name if Chris explicitly says to. If a commit already has a `Co-Authored-By: Claude ...` trailer, leave it exactly as-is.
 
@@ -49,7 +51,7 @@ Find commits on the branch that are not on the base branch:
 git log --format="%H %an" <base-branch>..<head-branch>
 ```
 
-Only rewrite commits where the author is the bot (`fridaytherobot` or `friday` — check the actual author name/email in this repo's log, since it varies). Leave any other commits (e.g. human teammates) untouched.
+Rewrite every commit whose author is not Chris — `fridaytherobot`, `friday`, `pr-signing-bot[bot]`, and any other bot/service account are all in scope, whatever name they show up under in this repo's log. Do not stop at the first bot name you recognize; list every distinct author on the branch and rewrite all of them except Chris. Leave only commits authored by human teammates (not bots) untouched.
 
 Compute the actual merge-base rather than using the base branch's current tip — the base branch may have moved on since the PR forked, and rebasing onto its live tip pulls in unrelated upstream history alongside the author rewrite, silently changing the PR's diff:
 
@@ -68,24 +70,33 @@ export GIT_COMMITTER_NAME="Christopher Pitt"
 export GIT_COMMITTER_EMAIL="cgpitt@gmail.com"
 ```
 
-Use `git rebase` with `--exec` to, for each bot commit: rewrite the author (the `--exec` script's own `git commit --amend --author=` call handles this; the committer comes from the exported `GIT_COMMITTER_*` vars above, inherited by the rebase's subshells), and add a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer only if one is entirely absent. If a commit already has any `Co-Authored-By: Claude ...` trailer, don't touch it. Do this with a small script rather than a one-liner, e.g.:
+Use `git rebase` with `--exec` to, for every non-Chris commit: rewrite the author (the `--exec` script's own `git commit --amend --author=` call handles this; the committer comes from the exported `GIT_COMMITTER_*` vars above, inherited by the rebase's subshells), and add a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer only if one is entirely absent. If a commit already has any `Co-Authored-By: Claude ...` trailer, don't touch it. Match against a list of every distinct bot author email found in Step 3 — not a single hardcoded name — so a bot you haven't seen before in this repo (e.g. a code-style or CI signing bot) still gets caught. Do this with a small script rather than a one-liner, e.g.:
 
 ```bash
 cat > /tmp/reauthor-fix.sh <<'SCRIPT'
 #!/bin/bash
 set -e
-BOT_NAME="$1"     # e.g. fridaytherobot or friday
-MODEL_NAME="$2"   # display name to use when a trailer is missing, e.g. "Claude Sonnet 4.5"
-if [ "$(git log -1 --format=%an)" != "$BOT_NAME" ]; then exit 0; fi
+MODEL_NAME="$1"   # display name to use when a trailer is missing, e.g. "Claude Sonnet 4.5"
+shift
+BOT_EMAILS=("$@") # every non-Chris author email seen on this branch (Step 3) — not just one bot
+CUR_EMAIL=$(git log -1 --format=%ae)
+match=0
+for e in "${BOT_EMAILS[@]}"; do
+  if [ "$CUR_EMAIL" = "$e" ]; then match=1; fi
+done
+if [ "$match" -eq 0 ]; then exit 0; fi
 git commit --amend --no-edit --author="Christopher Pitt <cgpitt@gmail.com>"
 msg=$(git log -1 --format=%B)
 if ! printf '%s' "$msg" | grep -q '^Co-Authored-By: Claude'; then
+  if [ -z "$msg" ]; then
+    msg=$(git log -1 --format=%s --skip=0 2>/dev/null || echo "Automated change")
+  fi
   fixed=$(printf '%s\n\nCo-Authored-By: %s <noreply@anthropic.com>' "$msg" "$MODEL_NAME")
   git commit --amend -m "$fixed"
 fi
 SCRIPT
 chmod +x /tmp/reauthor-fix.sh
-git rebase "$BASE_SHA" --exec '/tmp/reauthor-fix.sh <bot-name> "<model-name>"'
+git rebase "$BASE_SHA" --exec '/tmp/reauthor-fix.sh "<model-name>" "<bot-email-1>" "<bot-email-2>" ...'
 ```
 
 Ask Chris which model name to use for any trailer-less commits before running this — don't guess or default to a specific version, since the right answer depends on what was actually used at the time and Chris is the authority on that, not the assistant's own (possibly stale) model knowledge.
@@ -114,7 +125,7 @@ Show Chris the updated commit list and the PR URL.
 ## Don'ts
 
 1. **DON'T** modify commit message content beyond adding a missing Co-Authored-By trailer — leave everything else exactly as written
-2. **DON'T** rewrite commits that aren't authored by the bot
+2. **DON'T** rewrite commits authored by human teammates — but DO rewrite every bot/service-account commit, even ones you don't recognize by name; the goal is exactly two names left in the log (Chris, Claude), never a third
 3. **DON'T** resolve rebase conflicts — stop and inform Chris
 4. **DON'T** use `--force` — always use `--force-with-lease`
 5. **DON'T** modify the base branch or any commits outside the PR
@@ -126,8 +137,9 @@ Show Chris the updated commit list and the PR URL.
 
 ## Success Criteria
 
-- All bot commits on the PR branch are now authored by Christopher Pitt <cgpitt@gmail.com>
-- All bot commits also show Christopher Pitt <cgpitt@gmail.com> as **committer**, not just author — verified via the GitHub API, not just local `git log`
+- Exactly two names appear anywhere in the PR's commit log: Christopher Pitt and Claude (co-author trailer only). No bot, service account, or other third identity remains as author or committer — check the full distinct-author list, not just the bot name you expected going in.
+- All non-Chris commits on the PR branch are now authored by Christopher Pitt <cgpitt@gmail.com>
+- All non-Chris commits also show Christopher Pitt <cgpitt@gmail.com> as **committer**, not just author — verified via the GitHub API, not just local `git log`
 - Commit message bodies are otherwise unchanged, including any pre-existing Co-Authored-By trailers
 - Every commit that previously lacked a trailer now has `Co-Authored-By: Claude <model-name Chris specified> <noreply@anthropic.com>`
 - Branch is force-pushed with lease
