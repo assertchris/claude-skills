@@ -69,9 +69,9 @@ Use the sub-agent's returned text as the PR body.
 
 **This is Step 5 of 10. Do NOT stop here. Continue immediately to Step 6.**
 
-### Step 6: Skip QA Checklist
+### Step 6: Generate QA Checklist
 
-The QA checklist is no longer generated at PR-creation time. It is generated unconditionally by `custom-workflow-pr` after CI passes and stored in topic meta via `friday_topic_set_meta`. Do not invoke `custom-qa-checklist` here. Set `QA_CHECKLIST` to empty and continue to Step 7.
+Invoke the `custom-qa-checklist` skill to generate the QA checklist. Capture its full output as `QA_CHECKLIST`. If generation fails for any reason, set `QA_CHECKLIST` to an empty string and note the failure — do not stop.
 
 ### Step 7: Determine PR Title
 
@@ -88,13 +88,16 @@ Build the `gh pr create` command with these flags:
 
 Construct the PR body as follows:
 - Always include `## Summary` with the styled summary from Step 5.
-- Do NOT include a `## QA Checklist` section — the checklist is stored in topic meta after CI passes and posted to JIRA via fan-out.
+- Always include `## QA Checklist` with the checklist from Step 6 (if non-empty).
 - Always end with the `🤖 Generated with [Claude Code]` attribution line.
 
 ```bash
 gh pr create --assignee assertchris --reviewer assertchris --title "<title>" --body "$(cat <<'EOF'
 ## Summary
 <rewritten summary from Step 5>
+
+## QA Checklist
+<checklist from Step 6, or omit this section if empty>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -125,7 +128,7 @@ Output the PR URL so Chris can see it. Mention that the "do not merge" label has
 
 ## Don'ts
 
-1. **DON'T** include a `## QA Checklist` section or any checklist content in the PR body — QA checklists are stored in topic meta and posted to JIRA via fan-out by `custom-workflow-pr`
+1. **DON'T** omit the `## QA Checklist` section when `QA_CHECKLIST` is non-empty — it belongs in the PR body
 2. **DON'T** include "Files Changed" or "Key Review Areas" sections
 3. **DON'T** commit uncommitted changes — only push and create the PR
 4. **DON'T** assign or add as reviewer anyone other than `assertchris`
@@ -143,4 +146,4 @@ Output the PR URL so Chris can see it. Mention that the "do not merge" label has
 - PR is a draft if and only if Chris asked for a draft
 - "do not merge" label is applied to every PR without exception
 - PR URL is displayed
-- No QA checklist section in the PR body
+- QA checklist is included in the PR body (when non-empty)
