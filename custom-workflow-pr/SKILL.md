@@ -1,7 +1,7 @@
 ---
 name: custom-workflow-pr
 user-invocable: true
-description: Push the current branch and open a PR assigned to assertchris, then watch CI until it passes or fails.
+description: Open a PR assigned to assertchris, then watch CI until it passes or fails. Only use when Chris explicitly asks to open or create a PR — never invoke just because commits need pushing.
 allowed-tools: Bash, Skill
 ---
 
