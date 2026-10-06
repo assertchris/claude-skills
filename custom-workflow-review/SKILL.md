@@ -119,11 +119,15 @@ If 5 rounds complete without a clean pass, stop and report the outstanding issue
 
 Run the following loop up to **5 times**. Stop early if the analysis comes back clean.
 
+**Never save the blast radius report or any of its findings to a file.** Use the results in-memory only. Do not write a blast report to disk, to notes, or anywhere else.
+
 ### Each iteration
 
 **Analysis (main agent)**
 
-Invoke the `change-blast-radius` skill directly on PR #N. Do not spawn a sub-agent for this — run it inline. Collect every RED or AMBER finding, every CRITICAL or HIGH security issue, and every Low or Medium effort test gap.
+Read and follow `BLAST-RADIUS.md` in this skill's directory (`~/.claude/skills/custom-workflow-review/BLAST-RADIUS.md`) to perform the full blast radius analysis inline. The PR diff and working directory are already available from Phase 1 — do not re-fetch or re-checkout.
+
+Collect every RED or AMBER finding, every CRITICAL or HIGH security issue, and every Low or Medium effort test gap.
 
 - If nothing significant: Phase 2 is done. Move to Step 5.
 - If findings: spawn the repairer.
@@ -252,92 +256,11 @@ Present the report to the user and call out anything still requiring human atten
 
 ---
 
-## Step 6 (Mode B only): Offer to Deliver Review Fixes
+## Step 6 (Mode B only): Post Review Fixes as Diff Comment
 
 Skip this step entirely for Mode A.
 
-### Check whether the PR branch exists in the upstream repo
-
-Before offering to open a PR, check whether `<headRefName>` exists as a branch in the repo (not just locally):
-
-```bash
-git ls-remote --heads origin <headRefName>
-```
-
-- **Branch exists** → a fix PR can safely target it. Follow the "Fix PR path" below.
-- **Branch does not exist** (e.g. the PR comes from a fork, or the branch was already deleted) → a fix PR would fall back to main and pull in unrelated commits. Follow the "Diff comment path" instead.
-
----
-
-### Fix PR path (branch exists in upstream)
-
-Present a summary to Chris covering:
-
-1. What the review found.
-2. What changes were made on the review branch (`review/<pr-number>-<slug>`).
-3. That a fix PR would target **review branch → `<headRefName>`** (the original PR's branch, NOT main).
-
-Then ask:
-
-> "Do you want me to open a PR for these review changes? It would target `<headRefName>` (PR #<pr-number>'s branch), not main."
-
-**Wait for explicit confirmation before doing anything.**
-
-- If Chris says yes: open the PR (see below).
-- If Chris says no or does not respond: stop.
-
-#### Opening the review PR (only on explicit approval)
-
-Compose the PR body:
-
-```
-## Review fixes for PR #<pr-number>
-
-This PR contains automated review fixes for #<pr-number> ([PR title]).
-
-**What it fixes:**
-[Bullet list using the "Bullet item format" from Step 5 — every item must state the problem AND the fix. Copy from the Step 5 "What was fixed" list.]
-
-**To merge:** merge this PR into `<headRefName>` before landing PR #<pr-number>.
-```
-
-Invoke the `custom-workflow-pr` skill with these arguments:
-
-```
-base: <headRefName>  body: <composed body above>
-```
-
-`custom-workflow-pr` passes both through to `custom-submit-pr`, which handles the writing style guide pass, `--assignee`, `--reviewer`, push, and CI watching. It returns the PR URL — capture it.
-
-#### Comment on the original PR
-
-Immediately after the fix PR is opened, post a comment on the **original** PR linking to it:
-
-```bash
-gh pr comment <number> --body "$(cat <<'EOF'
-## Automated review complete
-
-Friday has finished reviewing this PR and opened a fix PR with the suggested changes:
-
-**Fix PR:** <fix-pr-url>
-
-**What it fixes:**
-[Bullet list using the "Bullet item format" from Step 5 — every item must state the problem AND the fix. Copy from the Step 5 "What was fixed" list.]
-
-Merge the fix PR into `<headRefName>` before landing this one.
-EOF
-)"
-```
-
-#### Record the fix PR as already-reviewed
-
-Immediately after posting the comment, call `friday_pr_review_avoid` with the fix PR's URL. This records a `pr.review.started` event so the automated scheduler permanently excludes it — no topic, no prompt injection, no side effects.
-
----
-
-### Diff comment path (branch does not exist in upstream)
-
-A fix PR is not safe. Instead, post the review fixes as a diff comment directly on the original PR so the author can apply them manually.
+**Never open a fix branch or fix PR for someone else's PR.** Always post fixes as a diff comment on the original PR, regardless of whether the branch exists in upstream.
 
 Generate the diff of everything on the review branch relative to the PR's head:
 
@@ -382,11 +305,11 @@ EOF
 )"
 ```
 
-Inform Chris that the diff has been posted as a comment and that no fix PR was opened.
+Inform Chris that the diff has been posted as a comment.
 
 ### Clean up the worktree
 
-After the fix PR is opened, the diff comment is posted, or Chris declines — remove the temporary worktree:
+After the diff comment is posted — remove the temporary worktree:
 
 ```bash
 git worktree remove /tmp/review-<pr-number> --force
@@ -402,5 +325,6 @@ git worktree remove /tmp/review-<pr-number> --force
 - If a fix is ambiguous or risky, the repairer sub-agent must surface it to the user — but still commit and push everything else first.
 - Max 5 rounds per phase. If not clean by round 5, report and wait for instruction.
 - **Never commit directly to the original PR's head branch in Mode B.** All commits go to the review branch only.
-- **Never open a review PR automatically.** Always ask first and wait for an explicit yes.
+- **Never open a fix branch or fix PR for someone else's PR (Mode B).** Always deliver fixes as a diff comment on the original PR.
+- **Never save the blast radius report to disk.** Use findings in-memory only.
 - If you need to read or summarize something, consider using Haiki in a sub-agent to reduce token wastage. 
