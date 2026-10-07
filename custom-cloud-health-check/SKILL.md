@@ -135,7 +135,7 @@ Present findings grouped by severity:
 - `set-cookie` on a cacheable route — Cloudflare will not cache any response that sets a cookie. Remove session/cookie middleware from routes you want cached (use `withoutMiddleware` or a dedicated route group).
 
 ### 🟡 Suboptimal (caching present but wrong TTLs or missing coverage)
-- `s-maxage` is absent or less than 604800 on homepage
+- `s-maxage` is absent on homepage (Cloudflare will not cache for a meaningful duration without it)
 - `/build/` assets missing `immutable` directive
 - `last-modified` absent on responses
 
