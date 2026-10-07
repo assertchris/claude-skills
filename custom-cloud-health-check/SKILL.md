@@ -87,7 +87,30 @@ From the project directory, check:
 - Is the sync wired into a deploy step or Artisan command?
 
 ### 3c. Layout / view bloat
-- Check `resources/views/components/layout.blade.php` (or equivalent) for leftover `@filamentStyles`, `@filamentScripts`, `@livewireStyles`, `@livewireScripts` when Filament/Livewire isn't used on the public front end.
+
+Read the main public layout file (typically `resources/views/components/layout.blade.php` or `resources/views/layouts/app.blade.php`). Look for:
+
+**Framework directives loaded unnecessarily**
+- `@filamentStyles`, `@filamentScripts` — Filament is an admin panel; these should never appear in a public-facing layout
+- `@livewireStyles`, `@livewireScripts` — only needed if Livewire components are actually used on that page; check whether any Livewire components exist in public views before flagging
+
+**Fonts**
+- Any `<link>` loading Google Fonts, Typekit, or other external font services — note the font family names
+- Grep the view files and CSS/JS for actual usage of those font families: `grep -r "font-family\|font-face\|fontFamily" resources/`
+- Any font declared but not referenced anywhere in styles or Tailwind config is dead weight and an extra render-blocking request
+
+**Commented-out HTML**
+- Large blocks of `{{-- ... --}}` or `<!-- ... -->` commented-out markup — these bloat the response payload and often contain stale or sensitive structure
+
+**Inline scripts / styles**
+- Large `<style>` or `<script>` blocks that belong in compiled assets
+- `<script src="...">` tags pointing to CDN-hosted libraries that are also bundled via Vite (duplicate loading)
+
+**Meta / link tag hygiene**
+- Unused `<meta>` tags (e.g. generator tags, deprecated keywords meta)
+- Multiple `<link rel="canonical">` or conflicting open graph tags
+
+For each finding: note the file, the approximate line, what it is, and why it costs (extra request, render-blocking, payload bloat, etc.).
 
 ### 3d. Public directory hygiene
 Check for the presence of:
@@ -120,7 +143,7 @@ Present findings grouped by severity:
 - Missing security headers (X-Frame-Options, HSTS, Referrer-Policy, etc.)
 - `assertchris/cloudflare-security-rule-sync` not installed — blocks everything not on your route allowlist at the Cloudflare edge before it touches PHP
 - Dead middleware files sitting unregistered
-- Leftover Filament/Livewire directives in public layout
+- Layout bloat: unused framework directives (Filament/Livewire), unneeded external font loads, commented-out HTML, CDN scripts duplicated by Vite, stale meta tags
 - Empty `favicon.ico` (0 bytes) causing repeated browser fetches
 
 For each finding include:
