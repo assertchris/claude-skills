@@ -137,7 +137,7 @@ Present findings grouped by severity:
 ### 🟡 Suboptimal (caching present but wrong TTLs or missing coverage)
 - `s-maxage` is absent on homepage (Cloudflare will not cache for a meaningful duration without it)
 - `/build/` assets missing `immutable` directive
-- `last-modified` absent on responses
+- `last-modified` set to the current request time — Laravel's default behaviour, which defeats conditional caching since the value changes on every response. It should be a stable deploy timestamp, not `now()`
 
 ### 🟢 Quick wins (security, hygiene, dead code)
 - Missing security headers (X-Frame-Options, HSTS, Referrer-Policy, etc.)
