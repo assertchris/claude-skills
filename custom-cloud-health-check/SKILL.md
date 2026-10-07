@@ -91,8 +91,8 @@ From the project directory, check:
 Read the main public layout file (typically `resources/views/components/layout.blade.php` or `resources/views/layouts/app.blade.php`). Look for:
 
 **Framework directives loaded unnecessarily**
-- `@filamentStyles`, `@filamentScripts` — Filament is an admin panel; these should never appear in a public-facing layout
-- `@livewireStyles`, `@livewireScripts` — only needed if Livewire components are actually used on that page; check whether any Livewire components exist in public views before flagging
+- `@filamentStyles`, `@filamentScripts` — check whether any Filament components are actually used in public views before flagging
+- `@livewireStyles`, `@livewireScripts` — check whether any Livewire components are actually used on that page before flagging
 
 **Fonts**
 - Any `<link>` loading Google Fonts, Typekit, or other external font services — note the font family names
