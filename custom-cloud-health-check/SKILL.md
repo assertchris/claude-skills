@@ -33,16 +33,18 @@ curl -sI "https://<domain>"
 ```
 Extract and record:
 - `cache-control` value
-- `cf-cache-status` (MISS / HIT / EXPIRED / BYPASS / etc.)
+- `cf-cache-status` (MISS / HIT / EXPIRED / BYPASS / DYNAMIC / etc.)
 - `age`
 - `last-modified`
 - `cf-ray`
+- `laravel-cloud-cache` — if present and set to `DYNAMIC`, Laravel Cloud is signalling Cloudflare to bypass cache. **This overrides any `cache-control` header you set.** Laravel Cloud has a dashboard toggle to suppress it, but it does not reliably work. The correct fix is a Cloudflare Transform Rule → "Remove Response Header" targeting `laravel-cloud-cache`.
+- `set-cookie` — any `Set-Cookie` header on a cacheable response also causes Cloudflare to mark it `DYNAMIC` and skip caching. Check whether Laravel is setting session or XSRF cookies on the homepage. If so, the session/cookie middleware must be removed from the cacheable route.
 
 ### 2b. Bypass Cloudflare cache to see origin headers
 ```bash
 curl -sI -H "Cache-Control: no-cache" "https://<domain>"
 ```
-Record the origin `cache-control` value separately so you can distinguish what Laravel sends vs what Cloudflare serves.
+Record the origin `cache-control` value separately so you can distinguish what Laravel sends vs what Cloudflare serves. Also check whether `laravel-cloud-cache` and `set-cookie` appear in the origin response — if they do, the fix is in the app; if they don't, the fix is a Cloudflare Transform Rule.
 
 ### 2c. Static asset headers
 Pick one `/build/` path from the HTML source or `public/build/manifest.json` if accessible. Run:
@@ -105,7 +107,9 @@ Present findings grouped by severity:
 ### 🔴 Critical (serving 404s or no caching at all)
 - Missing crawler files (robots.txt, sitemap, favicon, etc.)
 - No `Cache-Control` header on homepage
-- `cf-cache-status: BYPASS` or missing on homepage
+- `cf-cache-status: BYPASS` or `DYNAMIC` on homepage
+- `laravel-cloud-cache: DYNAMIC` present in response — Laravel Cloud injects this header and Cloudflare respects it, bypassing cache entirely regardless of your `cache-control` value. The dashboard toggle to suppress it does not reliably work. Fix: add a Cloudflare Transform Rule → **Modify Response Header** → **Remove** → `laravel-cloud-cache`. This must be done per-zone in the Cloudflare dashboard.
+- `set-cookie` on a cacheable route — Cloudflare will not cache any response that sets a cookie. Remove session/cookie middleware from routes you want cached (use `withoutMiddleware` or a dedicated route group).
 
 ### 🟡 Suboptimal (caching present but wrong TTLs or missing coverage)
 - `s-maxage` is absent or less than 604800 on homepage
@@ -140,6 +144,7 @@ If yes, create a note via `friday_notes_create` with:
   - **Platform** — hosting stack (Laravel Cloud → Cloudflare, etc.)
   - **Findings** — same grouped list from Step 4
   - **Recommended Packages** — always include `assertchris/cloudflare-security-rule-sync` if not already installed, with install instructions and what it does
+  - **Cloudflare Rules Required** — if `laravel-cloud-cache` was found in responses, document the required Transform Rule (Modify Response Header → Remove → `laravel-cloud-cache`) and note that the Laravel Cloud dashboard toggle for this is unreliable
   - **Implementation Checklist** — numbered list of concrete tasks (no code, just what to do)
   - **Decisions / Open Questions** — anything that needs a choice before implementation (TTL values, security contact email, sitemap URLs, etc.)
 
