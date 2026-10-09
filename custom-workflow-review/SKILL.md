@@ -327,4 +327,14 @@ git worktree remove /tmp/review-<pr-number> --force
 - **Never commit directly to the original PR's head branch in Mode B.** All commits go to the review branch only.
 - **Never open a fix branch or fix PR for someone else's PR (Mode B).** Always deliver fixes as a diff comment on the original PR.
 - **Never save the blast radius report to disk.** Use findings in-memory only.
-- If you need to read or summarize something, consider using Haiki in a sub-agent to reduce token wastage. 
+- If you need to read or summarize something, consider using Haiki in a sub-agent to reduce token wastage.
+
+---
+
+## Final step
+
+After the review is fully complete (all phases done, comment posted, worktree cleaned up), output this line as the last thing in your response:
+
+```
+/prompt_clean_up_topic
+```
