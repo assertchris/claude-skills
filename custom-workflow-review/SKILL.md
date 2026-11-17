@@ -59,7 +59,7 @@ All subsequent git operations in Mode B run inside `/tmp/review-<pr-number>`.
 cd /tmp/review-<pr-number>
 git checkout -b review/<pr-number>-<slug>
 # <slug> is the PR title lowercased, spaces replaced with hyphens, max 40 chars
-git push -u origin review/<pr-number>-<slug>
+# DO NOT push this branch to remote — it is local-only
 ```
 
 Record:
@@ -93,7 +93,7 @@ Invoke the `/code-review` skill directly on PR #N. Do not spawn a sub-agent for 
 
 Spawn a sub-agent. Give it the full issue list, the absolute working directory path, and this instruction:
 
-> You are a code repairer. Your job is to fix code issues and commit the result. You MUST commit and push before returning — do not summarise, do not report, do not stop at "here's what I'd change." Actually change the files, then commit and push.
+> You are a code repairer. Your job is to fix code issues and commit the result. You MUST commit before returning — do not summarise, do not report, do not stop at "here's what I'd change." Actually change the files, then commit. Do NOT push — the review branch is local-only.
 >
 > Working directory: [absolute path — Mode A: project root, Mode B: /tmp/review-<pr-number>]
 >
@@ -105,9 +105,9 @@ Spawn a sub-agent. Give it the full issue list, the absolute working directory p
 > Once all files are fixed:
 > 4. `git add` each changed file by name (do NOT use `git add .`).
 > 5. `git commit -m "fix(review): [brief description] (code-review round N)"`
-> 6. `git push`
+> 6. For Mode A only: `git push`
 >
-> Return the commit SHA and a one-line summary of what was fixed. If you cannot fix an issue, say why — but still commit and push everything else.
+> Return the commit SHA and a one-line summary of what was fixed. If you cannot fix an issue, say why — but still commit everything else.
 
 Wait for the repairer to complete. Then start the next iteration.
 
@@ -136,7 +136,7 @@ Collect every RED or AMBER finding, every CRITICAL or HIGH security issue, and e
 
 Spawn a sub-agent. Give it the full findings list and the working directory, and this instruction:
 
-> You are a code repairer. Your job is to fix code issues and push the result. You MUST push before returning.
+> You are a code repairer. Your job is to fix code issues and commit the result. You MUST commit before returning. Do NOT push — the review branch is local-only.
 >
 > Working directory: [absolute path — Mode A: project root, Mode B: /tmp/review-<pr-number>]
 >
@@ -149,7 +149,7 @@ Spawn a sub-agent. Give it the full findings list and the working directory, and
 > Once all files are fixed:
 > 1. `git add` each changed file by name (do NOT use `git add .`).
 > 2. `git commit -m "fix(review): [brief description] (blast-radius round N)"`
-> 3. `git push` — this is MANDATORY. Do not return without running this command and confirming it succeeded.
+> 3. For Mode A only: `git push` — this is MANDATORY for Mode A. Do not return without confirming it succeeded.
 
 Wait for the repairer to complete. Then start the next iteration.
 
@@ -321,7 +321,8 @@ git worktree remove /tmp/review-<pr-number> --force
 
 - Phases run sequentially. Complete Phase 1 before starting Phase 2.
 - Sub-agents run the skills whole — do not break the skills into micro-tasks.
-- **Repairer sub-agents MUST run `git push` as their final act.** A repair that is not pushed never happened. Do not return from a repairer sub-agent without confirming `git push` exited 0.
+- **Mode A repairer sub-agents MUST run `git push` as their final act.** A Mode A repair that is not pushed never happened. Do not return from a Mode A repairer sub-agent without confirming `git push` exited 0.
+- **Mode B repairer sub-agents MUST NOT push.** The review branch is local-only. Never push a `review/*` branch to remote under any circumstances.
 - If a fix is ambiguous or risky, the repairer sub-agent must surface it to the user — but still commit and push everything else first.
 - Max 5 rounds per phase. If not clean by round 5, report and wait for instruction.
 - **Never commit directly to the original PR's head branch in Mode B.** All commits go to the review branch only.
