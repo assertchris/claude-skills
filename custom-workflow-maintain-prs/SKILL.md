@@ -2,7 +2,7 @@
 name: custom-workflow-maintain-prs
 user-invocable: true
 description: Maintain all open PRs — address unresolved review feedback, rebase outdated branches, and resolve merge conflicts. Run this to keep all open PRs clean and up to date.
-allowed-tools: Bash, Agent, Read, Edit, Glob, mcp__friday__friday_github_search_prs, mcp__friday__friday_pr_review_list_projects
+allowed-tools: Bash, Agent, Read, Edit, Glob, mcp__friday__friday_github_search_prs, mcp__friday__friday_projects_list
 ---
 
 # Maintain Open PRs
@@ -30,7 +30,7 @@ Store the list as `prs`. Initialise a results log `prResults = []`.
 
 ## Step 2 — Discover local repo paths
 
-Call `friday_pr_review_list_projects`. This returns a map of `nameWithOwner → localPath` for all repos configured for PR review (e.g. `{ "RingierIMU/ritdu-sports": "/home/friday/Code/ritdu-sports" }`).
+Call `friday_projects_list`. This returns a map of `nameWithOwner → localPath` for all repos configured for PR review (e.g. `{ "RingierIMU/ritdu-sports": "/home/friday/Code/ritdu-sports" }`).
 
 Store this as `repoPaths`.
 
