@@ -86,10 +86,28 @@ Determine the project's tech stack from the files in the working directory (Lara
 - The spacing container pattern
 - Logo component usage example
 
+**Token implementation rules — do not deviate:**
+- The brand defines exactly 6 semantic tokens. Their names and the Tailwind palette shades they map to are documented on the brand site — read them from there, do not assume.
+- **NEVER hardcode hex values for token definitions.** Tailwind 4 exposes all palette colors as CSS custom properties (e.g. `--color-stone-50`, `--color-blue-600`). Always reference those variables using `var()` so values stay in sync with Tailwind's palette and never drift. The pattern for a Laravel/Tailwind 4 project is:
+  ```css
+  @theme {
+      --color-background: var(--color-<shade-from-brand-site>);
+      /* ... one entry per token, values read from the brand site */
+  }
+
+  :root.dark {
+      --color-background: var(--color-<dark-shade-from-brand-site>);
+      /* ... dark overrides, values read from the brand site */
+  }
+  ```
+- Read the exact shade names (e.g. `stone-50`, `stone-950`, `blue-600`) from the brand site's Color Palette section — they are listed there. Map each to its `var(--color-<shade>)` reference. Never substitute your own values.
+- For opacity modifiers (e.g. borders, hover states not covered by the 6 tokens), use Tailwind's opacity modifier syntax on existing tokens: `border-foreground/15`, `hover:bg-foreground/10`, `bg-background/50` etc.
+- Do NOT invent additional tokens beyond the 6 the brand defines.
+
 **Adapt to the stack:**
-- For Laravel/Blade: suggest Blade components, Tailwind config additions, CSS in `resources/css/app.css`
-- For Next.js/React: suggest a `globals.css` with CSS vars, a `ThemeToggle` component, Tailwind `extend.colors` config
-- For plain HTML/CSS: suggest a `tokens.css` file and class definitions
+- For Laravel/Blade with Tailwind 4: add `@theme` block and `:root.dark` overrides in `resources/css/app.css` — no `tailwind.config.js` needed
+- For Next.js/React with Tailwind 4: same approach in `globals.css`
+- For plain HTML/CSS: define tokens in a `tokens.css` file; note Tailwind palette vars may not be available without Tailwind
 
 For each suggestion, explain briefly why it matches the guideline — one sentence max. Keep code blocks minimal and runnable.
 
