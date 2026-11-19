@@ -18,28 +18,9 @@ allowed-tools: Bash, Skill
 
 Use the /custom-submit-pr skill to push and open a PR. Pass through `doc-path:`, `draft`, `base:`, and `body:` from ARGUMENTS unchanged.
 
-Once the PR URL is returned, watch it for CI completion using a bash poll loop — stay in this session and run:
+Once the PR URL is returned, invoke the `custom-watch-ci` skill, passing `pr-url: <pr-url>`. This skill polls CI, skips label-related failures, attempts to fix real failures, and loops until green or max attempts reached.
 
-  ATTEMPTS=0
-  while true; do
-    STATUS=$(gh pr checks <pr-url> 2>&1)
-    if echo "$STATUS" | grep -qiE "no checks|could not find any checks"; then
-      ATTEMPTS=$((ATTEMPTS + 1))
-      if [ "$ATTEMPTS" -ge 3 ]; then
-        echo "No CI checks found after 3 attempts — skipping CI watch." && break
-      fi
-      echo "No checks found yet (attempt $ATTEMPTS/3), waiting 30s..."
-    elif echo "$STATUS" | grep -qE "fail|error"; then
-      echo "Checks failed:" && echo "$STATUS" && break
-    elif echo "$STATUS" | grep -qE "pending|in_progress|queued"; then
-      echo "Checks still running, waiting 30s..." && ATTEMPTS=0
-    else
-      echo "All checks passed." && break
-    fi
-    sleep 30
-  done
-
-When all checks pass, or if there are no checks after 3 attempts, store the QA checklist in topic meta:
+When `custom-watch-ci` exits (green or stopped), store the QA checklist in topic meta:
 
 1. Extract the topic ID from the current session scope — the numeric portion of `user::chris::<N>`. If the scope is not in this format (e.g. general session), skip meta storage and proceed to reporting.
 2. Run the `custom-qa-checklist` skill unconditionally to generate the checklist markdown.
