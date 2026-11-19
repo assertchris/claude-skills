@@ -2,7 +2,7 @@
 name: custom-workflow-address-feedback
 user-invocable: true
 description: Find, address, and resolve GitHub PR review threads for the current branch. Handles code fixes (commit + push per thread) and discussion replies.
-allowed-tools: Bash, Agent
+allowed-tools: Bash, Agent, Skill
 ---
 
 # Address Feedback
@@ -327,6 +327,12 @@ gh api -X POST repos/{owner}/{repo}/pulls/{prNumber}/requested_reviewers \
 If the request fails for a reviewer (e.g. they are no longer a collaborator), log the failure but continue with the remaining reviewers. Do not stop the skill.
 
 After sending re-requests, note which logins were successfully re-requested as `rerequestedReviewers`.
+
+## Step 12.5 — Watch CI
+
+If `commits_pushed > 0` (i.e. at least one fix was actually pushed), invoke the `custom-watch-ci` skill, passing `pr-url: {prUrl}`. This polls CI, skips label-related failures, attempts to fix additional failures, and loops until green or max attempts reached.
+
+If no commits were pushed (only discussion threads resolved), skip this step.
 
 ## Step 13 — Record a completion event
 
